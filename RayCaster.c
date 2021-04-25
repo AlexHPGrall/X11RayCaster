@@ -44,11 +44,11 @@ GetXOffset(float x, Map *level, FrameBuffer buf)
 	return (x-offset) - (((int)x-offset)/CellSize)*CellSize;
 }
 
-static void 
-CastRay(float x, float y, float angle, Map *level, FrameBuffer buf)
+static float 
+CastRay(float x, float y, float angle,float theta, Map *level, FrameBuffer buf)
 {
 	if(angle == 0 || angle == PI2 ||angle == PI || angle ==3*PI2)
-		return;
+		return 0;
 	float xIntersect, yIntersect, dx, dy, xoffset, yoffset;
 	size_t currentCell = GetMapIndex(x, y , level, buf);
 	int stepX, stepY;
@@ -152,10 +152,16 @@ CastRay(float x, float y, float angle, Map *level, FrameBuffer buf)
 
 		}
 	}
+	
 	if(side ==0)
-	BresenLine(x, y, rx, y+stepY*xIntersect, 0x00ff00, buf);
-	else
-	BresenLine(x, y,x+stepX*yIntersect, ry, 0x00ff00, buf);
+	{
+		//BresenLine(x, y, rx, y+stepY*xIntersect, 0x00ff00, buf);
+		return -1*(ABS(rx-x)*ABS(cosf(theta)) + xIntersect*ABS(sinf(theta)));
+	}
+	else{
+		//BresenLine(x, y,x+stepX*yIntersect, ry, 0x00ff00, buf);
+		return yIntersect*ABS(cosf(theta)) + ABS(ry-y)*ABS(sinf(theta));
+	}
 	
 	
 }
@@ -229,6 +235,8 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 	else if(input.e)
 		playerState->angle += dtime*playerState->rotspeed;
 
+	/*
+	 * NOTE: Debug controls
 	if(input.w)
 	{
 		playerState->ypos-=dtime*playerState->velocity;
@@ -245,8 +253,8 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 	{
 		playerState->xpos+=dtime*playerState->velocity;
 	}
-	/*
-	 * Note: Tank controls
+	*/
+	 // Note: Tank controls
 	if(input.w)
 	{	
 		opositdir= -1;
@@ -259,7 +267,6 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 		playerState->xpos -= dtime*playerState->velocity*(cosf(playerState->angle));
 		playerState->ypos -= dtime*playerState->velocity*(sinf(playerState->angle));
 	}
-	*/
 	//Keep our angle in the range [0,2PI[
 	if(playerState->angle >= 2*PI)
 		playerState->angle -= 2*PI;
@@ -269,9 +276,28 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 	CheckCollision(playerState, &gameMap, opositdir, buf);
 
 	FillBuffer(buf, 0x333333);
-	DrawMap(&gameMap, buf); 
-	DrawPlayer(*playerState, buf);
-	for(int i = 0; i<360; ++i)
-		CastRay(floor(playerState->xpos), floor(playerState->ypos), 
-				(i*2*PI/360),	&gameMap, buf);
+	//DrawMap(&gameMap, buf); 
+	//DrawPlayer(*playerState, buf);
+	for(int i = 0; i<buf.width; ++i){
+		float angle =(playerState->angle+ (PI/6))-i*((PI/3)/buf.width);
+		if(angle >= 2*PI)
+			angle -= 2*PI;
+		else if (angle <0)
+			angle += 2*PI;
+		float p= CastRay(floor(playerState->xpos), floor(playerState->ypos), 
+				angle,playerState->angle,
+				&gameMap, buf);
+		int color;
+		if(p<0)
+			color = 0xFF0000;
+		else
+			color = 0x550000;
+		p=ABS(p);
+		float lineHeight = (CellSize*buf.height/p);
+
+		if(lineHeight >= buf.height)
+			lineHeight = buf.height -1;
+		float drawStart = buf.height/2 + lineHeight/2;
+		DrawCol(i, drawStart, lineHeight, color, buf);
+	}
 }

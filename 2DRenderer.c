@@ -75,7 +75,12 @@ DrawQuad(int x[4], int y[4], int color, FrameBuffer buf)
 	DrawLine(x[3], y[3], x[0], y[0], color, buf);
 }
 
-
+static void
+DrawCol(int x, int y, int h, int color, FrameBuffer buf)
+{
+	for(int i=0; i<h; ++i)
+		DrawPixel(x, y-i, color, buf);
+}
 static void
 FillRect(int xorigin, int yorigin, int width, int height, int color, FrameBuffer buf)
 {

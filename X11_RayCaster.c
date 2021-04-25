@@ -97,7 +97,7 @@ NOTE: malloc might not deliver optimal performande, should try to allocate the b
 	//NOTE: XEvent are defined as a union over all the event types
 	XEvent event = {};
 
-	EntityState state = {width/2, height/2,	3, 200, 1.6};  
+	EntityState state = {width/2, height/2,	PI/4, 200, 1.6};  
 
 	//Main Loop
 	for(;;)
