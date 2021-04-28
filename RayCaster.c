@@ -31,36 +31,43 @@ GetMapIndex(float x, float y, Map *level, FrameBuffer buf)
 	return (i*level->columns + j);
 	
 }
-static float
-GetYOffset(float y, Map *level, FrameBuffer buf)
+static int
+GetYOffset(int y, Map *level, FrameBuffer buf)
 {
 	int offset = buf.height/2 - (CellSize*level->columns)/2;
 	return (y-offset) - (((int)y-offset)/CellSize)*CellSize;
 }
-static float
-GetXOffset(float x, Map *level, FrameBuffer buf)
+static int 
+GetXOffset(int x, Map *level, FrameBuffer buf)
 {
 	int offset = buf.width/2 - (CellSize*level->columns)/2;
 	return (x-offset) - (((int)x-offset)/CellSize)*CellSize;
 }
 
-static float 
-CastRay(float x, float y, float angle,float theta, Map *level, FrameBuffer buf)
+static float
+CastRay(int x, int y, float angle,float theta, Map *level, FrameBuffer buf)
 {
 	if(angle == 0 || angle == PI2 ||angle == PI || angle ==3*PI2)
 		return 0;
-	float xIntersect, yIntersect, dx, dy, xoffset, yoffset;
+	float xIntersect, yIntersect, dx, dy;
 	size_t currentCell = GetMapIndex(x, y , level, buf);
-	int stepX, stepY;
+	int stepX, stepY,xoffset, yoffset;
 	Bool hit=False;
-	//fprintf(stderr,"test");	
 	xoffset = GetXOffset(x, level, buf); 
 	yoffset = GetYOffset(y, level, buf); 
-	//!!Careful Zero div
-	//if(angle == 0)
-		
-	dx = ABS(1/ tanf(angle));
-	dy = ABS(1* tanf(angle));
+	if(angle == 0 || angle == PI)
+	{
+		dx =1;dy=0;
+	}
+	else if(angle == PI2||angle == 3*PI2)
+	{
+		dx = 0; dy=1;
+	}
+	else
+	{
+		dx = ABS(1/ tanf(angle));
+		dy = ABS(1* tanf(angle));
+	}
 
 	if(angle<PI2 || angle > 3*PI2)
 	{
@@ -86,14 +93,7 @@ CastRay(float x, float y, float angle,float theta, Map *level, FrameBuffer buf)
 		yIntersect = (CellSize-yoffset)*dx;
 	else
 		yIntersect = yoffset*dx;
-	/*
-	fprintf(stdout, "x: %.2f, y: %.2f, StepX: %i, yIntersect: %.2f, xIntersect: %.2f, currentCell: %u, xoffset: %.2f, yoffset: %.2f\n",
-			x, y, stepX, yIntersect, xIntersect, currentCell, xoffset, yoffset);
-	if(angle<PI2 || angle > 3*PI2)
-		BresenLine(x, y, (x-xoffset)+CellSize, y+xIntersect, 0x00dd00, buf);
-	else
-		BresenLine(x, y, (x-xoffset), y+xIntersect, 0x00dd00, buf);
-*/
+
 	int rx = (x-xoffset), ry = (y-yoffset), side;
 	if(stepX ==1)
 		rx+=CellSize;
@@ -101,72 +101,56 @@ CastRay(float x, float y, float angle,float theta, Map *level, FrameBuffer buf)
 		ry+=CellSize;
 	while(!hit)
 	{
-		if(stepY ==1)
+		
+		if(stepY*(y+(stepY*xIntersect)) < stepY*ry)
 		{
-			if(y+xIntersect < ry)
+			side =0;
+			currentCell += stepX;
+			hit = level->layout[currentCell];
+			if(!hit)
 			{
-				side =0;
-				currentCell += stepX;
-				hit = level->layout[currentCell];
-				if(!hit)
-				{
-					rx+=stepX*CellSize;
-					xIntersect +=dy*CellSize;
-				}
-			}
-			else
-			{
-				side =1;
-				currentCell +=stepY*level->columns;
-				hit = level->layout[currentCell];
-				if(!hit)
-				{
-					ry+=CellSize;
-					yIntersect +=dx*CellSize;
-				}
+				rx+=stepX*CellSize;
+				xIntersect +=dy*CellSize;
 			}
 		}
-		else{
-			if(y-xIntersect > ry)
+		else
+		{
+			side =1;
+			currentCell +=stepY*level->columns;
+			hit = level->layout[currentCell];
+			if(!hit)
 			{
-				side =0;
-				currentCell += stepX;
-				hit = level->layout[currentCell];
-				if(!hit)
-				{
-					rx+=stepX*CellSize;
-					xIntersect +=dy*CellSize;
-				}
+				ry+=stepY*CellSize;
+				yIntersect +=dx*CellSize;
 			}
-			else
-			{
-				side =1;
-				currentCell +=stepY*level->columns;
-				hit = level->layout[currentCell];
-				if(!hit)
-				{
-					ry+=stepY*CellSize;
-					yIntersect +=dx*CellSize;
-				}
-			}
-
 		}
+		
 	}
 	
 	if(side ==0)
 	{
-		//BresenLine(x, y, rx, y+stepY*xIntersect, 0x00ff00, buf);
-		return -1*(ABS(rx-x)*ABS(cosf(theta)) + xIntersect*ABS(sinf(theta)));
+		float DeltaX =ABS(rx-x);
+		float DeltaY = xIntersect;
+		float d = sqrt(DeltaX*DeltaX + DeltaY*DeltaY);
+		float p =  d*cos(ABS(theta-angle));//(ABS(rx-x)*ABS(cosf(theta)) + xIntersect*ABS(sinf(theta)));
+
+		//BresenLine(x, y, rx, y+stepY*xIntersect, 1000*p, buf);
+		return -p;
 	}
 	else{
-		//BresenLine(x, y,x+stepX*yIntersect, ry, 0x00ff00, buf);
-		return yIntersect*ABS(cosf(theta)) + ABS(ry-y)*ABS(sinf(theta));
+		
+		float DeltaX =yIntersect;
+		float DeltaY = ABS(ry-y);
+		float d = sqrt(DeltaX*DeltaX + DeltaY*DeltaY);
+		float p= d*cos(ABS(theta-angle));//yIntersect*ABS(cosf(theta)) + ABS(ry-y)*ABS(sinf(theta));
+		//BresenLine(x, y,x+stepX*yIntersect, ry, 1000*p, buf);
+		return p;
 	}
 	
 	
 }
 
-//this function screams simd
+//this function is stupid 
 static void
 CheckCollision(EntityState *player, Map *level, int direction, FrameBuffer buf)
 {
@@ -181,7 +165,6 @@ CheckCollision(EntityState *player, Map *level, int direction, FrameBuffer buf)
 		if(level->layout[GetMapIndex(x[i], y[i], level, buf)])
 		{ 
 
-			//fprintf(stdout, "x=%f, y=%f\n", xp, yp);
 			player->xpos += direction*0.5f*(cosf(player->angle));
 			player->ypos += direction*0.5f*(sinf(player->angle));
 			CheckCollision(player, level, direction, buf);
@@ -278,8 +261,11 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 	FillBuffer(buf, 0x333333);
 	//DrawMap(&gameMap, buf); 
 	//DrawPlayer(*playerState, buf);
-	for(int i = 0; i<buf.width; ++i){
-		float angle =(playerState->angle+ (PI/6))-i*((PI/3)/buf.width);
+	for(int i = 0; i<buf.width; ++i)
+	{
+
+		float angle =(playerState->angle+ (PI/6))-(buf.width-i)*((PI/3)/buf.width);
+
 		if(angle >= 2*PI)
 			angle -= 2*PI;
 		else if (angle <0)
@@ -288,12 +274,13 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 				angle,playerState->angle,
 				&gameMap, buf);
 		int color;
+		//absurd trick to distinguish walls
 		if(p<0)
 			color = 0xFF0000;
 		else
 			color = 0x550000;
 		p=ABS(p);
-		float lineHeight = (CellSize*buf.height/p);
+		float lineHeight= (CellSize*buf.height/p);
 
 		if(lineHeight >= buf.height)
 			lineHeight = buf.height -1;
