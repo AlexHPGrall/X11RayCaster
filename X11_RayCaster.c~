@@ -28,7 +28,6 @@ typedef struct FrameBuffer
 	int *buffer;
 }FrameBuffer;
 
-#include "./2DUtils.c"
 #include "./2DRenderer.c"
 #include "./RayCaster.c"
 
