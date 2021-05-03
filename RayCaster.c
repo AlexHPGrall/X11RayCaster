@@ -1,31 +1,5 @@
 //Obviously the map struct is completely broken but sufficient to get us 
 //up and running for the ray caster part
-typedef struct{
-	int rows;
-	int columns;
-	uint8_t layout[8*16];
-}Map;
-
-Map gameMap = {8,16,
-		   {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-		    1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,
-		    1,0,0,1,0,0,1,1,1,0,0,1,0,0,0,1,
-		    1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,1,
-		    1,0,0,0,1,1,1,0,1,0,0,0,0,1,0,1,
-		    1,0,1,1,0,0,0,0,0,0,1,1,0,0,0,1,
-		    1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-		    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}};
-//int CellSize = 64;
-
-typedef struct{
-	float xpos, ypos, angle, velocity, rotspeed;
-}EntityState;
-typedef struct RayInfo
-{
-	float dist;
-	int offset;
-	int side;
-}RayInfo;
 
 static size_t
 GetMapIndex(float x, float y, Map *level, FrameBuffer buf)
@@ -283,13 +257,8 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 		Ray= CastRay(floor(playerState->xpos), floor(playerState->ypos), 
 				angle,playerState->angle,
 				&gameMap, buf);
-		float lineHeight= (CellSize*buf.height/Ray.dist);
-
-		if(lineHeight >= buf.height)
-			lineHeight = buf.height -1;
-		float drawStart = buf.height/2 + lineHeight/2;
 		//int color = 0xff00ff;
-		DrawColTexture(i, drawStart, lineHeight, Ray.offset, Texture, buf);
+		DrawColTexture(i, Ray, Texture, buf);
 		//DrawCol(i, drawStart, lineHeight, color, buf);
 	}
 }

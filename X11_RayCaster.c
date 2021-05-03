@@ -28,9 +28,7 @@ typedef struct FrameBuffer
 	int *buffer;
 }FrameBuffer;
 
-//Need to put that and other relevant stuff in a header file 
-int CellSize = 64;
-
+#include "./RayCaster.h"
 #include "./2DUtils.c"
 #include "./2DRenderer.c"
 #include "./RayCaster.c"
