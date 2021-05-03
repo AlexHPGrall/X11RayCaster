@@ -15,11 +15,17 @@ Map gameMap = {8,16,
 		    1,0,1,1,0,0,0,0,0,0,1,1,0,0,0,1,
 		    1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
 		    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}};
-int CellSize = 64;
+//int CellSize = 64;
 
 typedef struct{
 	float xpos, ypos, angle, velocity, rotspeed;
 }EntityState;
+typedef struct RayInfo
+{
+	float dist;
+	int offset;
+	int side;
+}RayInfo;
 
 static size_t
 GetMapIndex(float x, float y, Map *level, FrameBuffer buf)
@@ -44,11 +50,9 @@ GetXOffset(int x, Map *level, FrameBuffer buf)
 	return (x-offset) - (((int)x-offset)/CellSize)*CellSize;
 }
 
-static float
+static RayInfo 
 CastRay(int x, int y, float angle,float theta, Map *level, FrameBuffer buf)
 {
-	if(angle == 0 || angle == PI2 ||angle == PI || angle ==3*PI2)
-		return 0;
 	float xIntersect, yIntersect, dx, dy;
 	size_t currentCell = GetMapIndex(x, y , level, buf);
 	int stepX, stepY,xoffset, yoffset;
@@ -129,22 +133,27 @@ CastRay(int x, int y, float angle,float theta, Map *level, FrameBuffer buf)
 	
 	if(side ==0)
 	{
+		RayInfo ray ={};
 		float DeltaX =ABS(rx-x);
 		float DeltaY = xIntersect;
 		float d = sqrt(DeltaX*DeltaX + DeltaY*DeltaY);
-		float p =  d*cos(ABS(theta-angle));//(ABS(rx-x)*ABS(cosf(theta)) + xIntersect*ABS(sinf(theta)));
-
+		ray.dist =  d*cos(ABS(theta-angle));
+		ray.side = side;
+		ray.offset = (y + (stepY*(int)xIntersect))%CellSize;
 		//BresenLine(x, y, rx, y+stepY*xIntersect, 1000*p, buf);
-		return -p;
+		return ray;
 	}
 	else{
 		
+		RayInfo ray ={};
 		float DeltaX =yIntersect;
 		float DeltaY = ABS(ry-y);
 		float d = sqrt(DeltaX*DeltaX + DeltaY*DeltaY);
-		float p= d*cos(ABS(theta-angle));//yIntersect*ABS(cosf(theta)) + ABS(ry-y)*ABS(sinf(theta));
+		ray.dist = d*cos(ABS(theta-angle));
+		ray.side = side;
+		ray.offset = (x+(stepX*(int)yIntersect))%CellSize;
 		//BresenLine(x, y,x+stepX*yIntersect, ry, 1000*p, buf);
-		return p;
+		return ray;
 	}
 	
 	
@@ -210,7 +219,7 @@ DrawPlayer(EntityState player, FrameBuffer buf)
 }
 
 static void
-GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float dtime)
+GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float dtime, BMP_Texture Texture)
 {
 	int opositdir=1;
 	if(input.q)
@@ -270,21 +279,17 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 			angle -= 2*PI;
 		else if (angle <0)
 			angle += 2*PI;
-		float p= CastRay(floor(playerState->xpos), floor(playerState->ypos), 
+		RayInfo Ray ={};
+		Ray= CastRay(floor(playerState->xpos), floor(playerState->ypos), 
 				angle,playerState->angle,
 				&gameMap, buf);
-		int color;
-		//absurd trick to distinguish walls
-		if(p<0)
-			color = 0xFF0000;
-		else
-			color = 0x550000;
-		p=ABS(p);
-		float lineHeight= (CellSize*buf.height/p);
+		float lineHeight= (CellSize*buf.height/Ray.dist);
 
 		if(lineHeight >= buf.height)
 			lineHeight = buf.height -1;
 		float drawStart = buf.height/2 + lineHeight/2;
-		DrawCol(i, drawStart, lineHeight, color, buf);
+		//int color = 0xff00ff;
+		DrawColTexture(i, drawStart, lineHeight, Ray.offset, Texture, buf);
+		//DrawCol(i, drawStart, lineHeight, color, buf);
 	}
 }

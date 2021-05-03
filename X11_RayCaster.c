@@ -28,6 +28,9 @@ typedef struct FrameBuffer
 	int *buffer;
 }FrameBuffer;
 
+//Need to put that and other relevant stuff in a header file 
+int CellSize = 64;
+
 #include "./2DUtils.c"
 #include "./2DRenderer.c"
 #include "./RayCaster.c"
@@ -100,6 +103,8 @@ NOTE: malloc might not deliver optimal performande, should try to allocate the b
 
 	EntityState state = {width/2, height/2,	PI/4, 200, 1.6};  
 
+	BMP_Texture WallTexture = {};
+	LoadBMP("colorstone.bmp", &WallTexture);
 	//Main Loop
 	for(;;)
 	{
@@ -209,7 +214,18 @@ NOTE: malloc might not deliver optimal performande, should try to allocate the b
 //		fprintf(stdout, "%0.2fms / %0.2ffps\n", elapsedtime, fps);
 		prevtime = currenttime;
 
-		GameUpdate(KbInput, ImageFrameBuffer, &state, elapsedtime/1000);
+		GameUpdate(KbInput, ImageFrameBuffer, &state, elapsedtime/1000, WallTexture);
+		/*
+		int *Pixel = ImageFrameBuffer.buffer;
+		uint8_t *bm = WallTexture.BitMap;
+
+				color=*(bm+(j%64)*3+(i%64)*3*64);
+				color += *(bm+(j%64)*3+(i%64)*3*64 + 1)<<8;
+				color += *(bm+(j%64)*3+(i%64)*3*64 + 2)<<16;
+				*Pixel++ = color;
+		*/	
+		
+
 		XPutImage(display, win, gc, 
 				Image, 0, 0, 0, 0, width, height);
 	}

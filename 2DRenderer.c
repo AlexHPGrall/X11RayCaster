@@ -82,6 +82,21 @@ DrawCol(int x, int y, int h, int color, FrameBuffer buf)
 		DrawPixel(x, y-i, color, buf);
 }
 static void
+DrawColTexture(int x, int y, int h, int offset, BMP_Texture Texture, FrameBuffer buf)
+{
+	uint8_t *bm = Texture.BitMap;
+	int u = offset*((float)Texture.Width/(float)CellSize);
+	for(int i=0; i<=h; ++i)
+	{
+		int color =0;
+		int v = i*((float)Texture.Height/(float)h); 	
+		color=*(bm+(u)*3+(v)*3*Texture.Width);
+		color += *(bm+(u)*3+(v)*3*Texture.Width + 1)<<8;
+		color += *(bm+(u)*3+(v)*3*Texture.Width + 2)<<16;
+		DrawPixel(x, y-i, color, buf);
+	}
+}
+static void
 FillRect(int xorigin, int yorigin, int width, int height, int color, FrameBuffer buf)
 {
 	for(int y = yorigin; y < yorigin + height  ; ++y)
