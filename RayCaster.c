@@ -113,7 +113,7 @@ CastRay(int x, int y, float angle,float theta, Map *level, FrameBuffer buf)
 		float d = sqrt(DeltaX*DeltaX + DeltaY*DeltaY);
 		ray.dist =  d*cos(ABS(theta-angle));
 		ray.side = side;
-		ray.offset = (y + (stepY*(int)xIntersect))%CellSize;
+		ray.offset = (int)roundf(y + (stepY*xIntersect))%CellSize;
 		//BresenLine(x, y, rx, y+stepY*xIntersect, 1000*p, buf);
 		return ray;
 	}
@@ -125,7 +125,7 @@ CastRay(int x, int y, float angle,float theta, Map *level, FrameBuffer buf)
 		float d = sqrt(DeltaX*DeltaX + DeltaY*DeltaY);
 		ray.dist = d*cos(ABS(theta-angle));
 		ray.side = side;
-		ray.offset = (x+(stepX*(int)yIntersect))%CellSize;
+		ray.offset = (int)roundf(x+(stepX*yIntersect))%CellSize;
 		//BresenLine(x, y,x+stepX*yIntersect, ry, 1000*p, buf);
 		return ray;
 	}
