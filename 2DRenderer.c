@@ -81,10 +81,12 @@ DrawCol(int x, int y, int h, int color, FrameBuffer buf)
 	for(int i=0; i<h; ++i)
 		DrawPixel(x, y-i, color, buf);
 }
+
 static void
 DrawColTexture(int x, RayInfo Ray , BMP_Texture Texture, FrameBuffer buf)
 {
-	float lineHeight= (CellSize*buf.height/Ray.dist);
+	//FOV is PI/3
+	float lineHeight= (CellSize*buf.width)/(2*tanf(PI/6)*Ray.dist);
 	int vStart =0;
 	if(lineHeight >= buf.height)
 	{
@@ -94,13 +96,14 @@ DrawColTexture(int x, RayInfo Ray , BMP_Texture Texture, FrameBuffer buf)
 	}
 	
 	int vEnd = Texture.Height - vStart;
+	float vStep = ((float)(vEnd-vStart)/lineHeight);
 	float drawStart = buf.height/2 + lineHeight/2;
 	uint8_t *bm = Texture.BitMap;
 	int u = Ray.offset*((float)Texture.Width/(float)CellSize);
 	for(int i=0; i<=lineHeight; ++i)
 	{
 		int color =0;
-		int v = vStart+ i*((float)(vEnd-vStart)/lineHeight); 	
+		int v = vStart+ i*vStep;  	
 		color=*(bm+(u)*3+(v)*3*Texture.Width);
 		color += *(bm+(u)*3+(v)*3*Texture.Width + 1)<<8;
 		color += *(bm+(u)*3+(v)*3*Texture.Width + 2)<<16;

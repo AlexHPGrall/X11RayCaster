@@ -171,12 +171,12 @@ DrawMap(Map *level, FrameBuffer buf)
 				  	 i*CellSize + yoffset,
 					 CellSize-1, CellSize-1, 0xffffff, buf);
 			}
-			else{
+			/*else{
 				
 				FillRect(j*CellSize + xoffset, 
 				  	 i*CellSize + yoffset,
 					 CellSize-1, CellSize-1, 0x000000, buf);
-			}
+			}*/
 		}
 	}
 }
@@ -192,6 +192,78 @@ DrawPlayer(EntityState player, FrameBuffer buf)
 		0xf54242, buf);
 }
 
+void 
+DrawFloor(EntityState *player, float FOVangle, FrameBuffer buf, BMP_Texture Floor, Map *level)
+{	int z =CellSize/2;
+	//we need half the vertical FOV
+	//
+	float playerCos = cosf(player->angle);
+	float playerSin = sinf(player->angle);
+	float FOVTan = ABS(tanf(FOVangle/2));
+	float HalfvFOV = atanf(tanf(FOVangle/2)*((float)buf.height/buf.width));
+	for(int h =0; h<buf.height/2;++h)
+	{
+		float vAngle = HalfvFOV-(h*2*(HalfvFOV/buf.height));	
+		
+		float FloorDist =z/(tanf(vAngle));
+		float FloorHalfWidth = FloorDist * FOVTan; 
+		float xEnd= player->xpos + FloorDist*playerCos - FloorHalfWidth*playerSin;
+		float xStart = player->xpos + FloorDist*playerCos + FloorHalfWidth*playerSin;
+		float yEnd = player->ypos + FloorDist*playerSin + FloorHalfWidth*playerCos;
+		float yStart= player->ypos + FloorDist*playerSin - FloorHalfWidth*playerCos;
+		float uStep =((float) (xEnd -xStart)/buf.width);
+		float vStep = ((float)(yEnd-yStart)/buf.width);
+/*
+		int uStart = ((float)(((int)(xStart)%CellSize)*Floor.Width))/(float)CellSize;
+		int vStart = ((float)(((int)(yStart)%CellSize)*Floor.Height))/(float)CellSize;
+		int uEnd= ((float)(((int)(xEnd)%CellSize)*Floor.Width))/(float)CellSize;
+		int vEnd = ((float)(((int)(yEnd)%CellSize)*Floor.Height))/(float)CellSize;
+
+	*/	
+		if(xStart>=0 && xStart < buf.width && yStart >=0 && yStart<buf.height)
+		DrawPixel(xStart, yStart, 0xffff00, buf);
+		if(xEnd>=0 && xEnd< buf.width && yEnd>=0 && yEnd<buf.height)
+		DrawPixel(xEnd, yEnd, 0xff0000, buf);
+
+		int color =0;
+		uint8_t *bm = Floor.BitMap;
+		for(int i=0; i<buf.width; ++i)
+		{
+			int u = xStart +i*uStep;
+			int v = yStart +i*vStep;
+			
+			/*
+			size_t currentCell = GetMapIndex(u, v, level, buf);
+			if(u<0 || u>= buf.width|| v<0 || v>=buf.height
+			|| currentCell<0 || currentCell >=8*16 || !level->layout[currentCell])
+			{
+				DrawPixel(i, buf.height -1 -h, 0, buf);
+			}
+			else
+			*/
+			{
+			u=u%CellSize;
+			u=u*(Floor.Width/CellSize);
+			v=v%CellSize;
+			v=v*(Floor.Height/CellSize);
+			color=*(bm+(u)*3+(v)*3*Floor.Width);
+			color += *(bm+(u)*3+(v)*3*Floor.Width + 1)<<8;
+			color += *(bm+(u)*3+(v)*3*Floor.Width + 2)<<16;
+			if(u==0 || u ==63 || v==0|| v==63)
+				color =0xffffff;
+			DrawPixel(i, buf.height -1 -h, color, buf);
+			//DrawPixel(i, buf.height-h, z, buf);
+
+			}
+		}
+
+		if(xStart>=0 && xStart < buf.width && yStart >=0 && yStart<buf.height)
+		if(xEnd>=0 && xEnd< buf.width && yEnd>=0 && yEnd<buf.height)
+		DrawPixel(xStart+(xEnd-xStart)/2, yStart+(yEnd-yStart)/2, 0xff00ff, buf);
+		
+	}
+
+}
 static void
 GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float dtime, BMP_Texture Texture)
 {
@@ -244,6 +316,9 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 	FillBuffer(buf, 0x333333);
 	//DrawMap(&gameMap, buf); 
 	//DrawPlayer(*playerState, buf);
+	
+	DrawFloor(playerState, PI/3, buf, Texture, &gameMap);
+		
 	for(int i = 0; i<buf.width; ++i)
 	{
 
@@ -261,4 +336,6 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 		DrawColTexture(i, Ray, Texture, buf);
 		//DrawCol(i, drawStart, lineHeight, color, buf);
 	}
+	
+	
 }

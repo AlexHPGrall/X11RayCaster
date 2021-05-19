@@ -5,6 +5,7 @@
 typedef struct{
 	int rows;
 	int columns;
+	//Debug hack
 	uint8_t layout[8*16];
 }Map;
 
