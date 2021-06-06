@@ -1,3 +1,4 @@
+static int focalDepth =1;
 //Obviously the map struct is completely broken but sufficient to get us 
 //up and running for the ray caster part
 
@@ -33,11 +34,12 @@ CastRay(int x, int y, float angle,float theta, Map *level, FrameBuffer buf)
 	Bool hit=False;
 	xoffset = GetXOffset(x, level, buf); 
 	yoffset = GetYOffset(y, level, buf); 
-	if(angle == 0 || angle == PI)
+	/*
+	if(ABS(angle) < epsilon || ABS(angle -PI) < epsilon)
 	{
 		dx =1;dy=0;
 	}
-	else if(angle == PI2||angle == 3*PI2)
+	else if(ABS(angle - PI2) <epsilon ||ABS(angle-3*PI2) <epsilon)
 	{
 		dx = 0; dy=1;
 	}
@@ -46,7 +48,9 @@ CastRay(int x, int y, float angle,float theta, Map *level, FrameBuffer buf)
 		dx = ABS(1/ tanf(angle));
 		dy = ABS(1* tanf(angle));
 	}
-
+*/
+		dx = ABS(1/ tanf(angle));
+		dy = ABS(1* tanf(angle));
 	if(angle<PI2 || angle > 3*PI2)
 	{
 		stepX =1;
@@ -111,10 +115,11 @@ CastRay(int x, int y, float angle,float theta, Map *level, FrameBuffer buf)
 		float DeltaX =ABS(rx-x);
 		float DeltaY = xIntersect;
 		float d = sqrt(DeltaX*DeltaX + DeltaY*DeltaY);
-		ray.dist =  d*cos(ABS(theta-angle));
+		//ray.dist =  d*cos(ABS(theta-angle));
+		ray.dist = sqrtf(SQUARE(rx-x) + SQUARE(stepY*xIntersect));
 		ray.side = side;
-		ray.offset = (int)roundf(y + (stepY*xIntersect))%CellSize;
-		//BresenLine(x, y, rx, y+stepY*xIntersect, 1000*p, buf);
+		ray.offset = ((int)floor(y + (stepY*xIntersect))%CellSize);
+		//BresenLine(x, y, rx, y+stepY*xIntersect, 0xff00ff, buf);
 		return ray;
 	}
 	else{
@@ -123,10 +128,11 @@ CastRay(int x, int y, float angle,float theta, Map *level, FrameBuffer buf)
 		float DeltaX =yIntersect;
 		float DeltaY = ABS(ry-y);
 		float d = sqrt(DeltaX*DeltaX + DeltaY*DeltaY);
-		ray.dist = d*cos(ABS(theta-angle));
+		//ray.dist = d*cos(ABS(theta-angle));
+		ray.dist = sqrtf(SQUARE(stepX*yIntersect) + SQUARE(ry-y));
 		ray.side = side;
-		ray.offset = (int)roundf(x+(stepX*yIntersect))%CellSize;
-		//BresenLine(x, y,x+stepX*yIntersect, ry, 1000*p, buf);
+		ray.offset = (int)floor(x+(stepX*yIntersect))%CellSize;
+		//BresenLine(x, y,x+stepX*yIntersect, ry, 0xff00ff, buf);
 		return ray;
 	}
 	
@@ -203,10 +209,15 @@ DrawFloor(EntityState *player, float FOVangle, FrameBuffer buf, BMP_Texture Floo
 	float HalfvFOV = atanf(tanf(FOVangle/2)*((float)buf.height/buf.width));
 	for(int h =0; h<buf.height/2;++h)
 	{
-		float vAngle = HalfvFOV-(h*2*(HalfvFOV/buf.height));	
-		
-		float FloorDist =z/(tanf(vAngle));
-		float FloorHalfWidth = FloorDist * FOVTan; 
+		//height of screen is 9/16*width of screen
+		//should have a variable for screen dim
+		//right now a widht of 2(frome -1 to 1) is hard coded
+		//
+		//we're only considering half the screen hence the 9/16
+		float pixY= (2.0f*h/(buf.height))*(9.0f/16.0f);
+		float FloorDist =focalDepth*0.5f*CellSize/pixY;
+		//FloorHalfWidth is actually FloorDist divided by half screen width
+		float FloorHalfWidth = FloorDist;  
 		float xEnd= player->xpos + FloorDist*playerCos - FloorHalfWidth*playerSin;
 		float xStart = player->xpos + FloorDist*playerCos + FloorHalfWidth*playerSin;
 		float yEnd = player->ypos + FloorDist*playerSin + FloorHalfWidth*playerCos;
@@ -220,10 +231,6 @@ DrawFloor(EntityState *player, float FOVangle, FrameBuffer buf, BMP_Texture Floo
 		int vEnd = ((float)(((int)(yEnd)%CellSize)*Floor.Height))/(float)CellSize;
 
 	*/	
-		if(xStart>=0 && xStart < buf.width && yStart >=0 && yStart<buf.height)
-		DrawPixel(xStart, yStart, 0xffff00, buf);
-		if(xEnd>=0 && xEnd< buf.width && yEnd>=0 && yEnd<buf.height)
-		DrawPixel(xEnd, yEnd, 0xff0000, buf);
 
 		int color =0;
 		uint8_t *bm = Floor.BitMap;
@@ -249,17 +256,17 @@ DrawFloor(EntityState *player, float FOVangle, FrameBuffer buf, BMP_Texture Floo
 			color=*(bm+(u)*3+(v)*3*Floor.Width);
 			color += *(bm+(u)*3+(v)*3*Floor.Width + 1)<<8;
 			color += *(bm+(u)*3+(v)*3*Floor.Width + 2)<<16;
+			/*
 			if(u==0 || u ==63 || v==0|| v==63)
 				color =0xffffff;
-			DrawPixel(i, buf.height -1 -h, color, buf);
+				*/
+			DrawPixel(i, (buf.height/2)+h, color, buf);
+			DrawPixel(i, (buf.height/2)-h, color, buf);
 			//DrawPixel(i, buf.height-h, z, buf);
 
 			}
 		}
 
-		if(xStart>=0 && xStart < buf.width && yStart >=0 && yStart<buf.height)
-		if(xEnd>=0 && xEnd< buf.width && yEnd>=0 && yEnd<buf.height)
-		DrawPixel(xStart+(xEnd-xStart)/2, yStart+(yEnd-yStart)/2, 0xff00ff, buf);
 		
 	}
 
@@ -321,8 +328,10 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 		
 	for(int i = 0; i<buf.width; ++i)
 	{
-
-		float angle =(playerState->angle+ (PI/6))-(buf.width-i)*((PI/3)/buf.width);
+		float pixX = -1.0f+2.0f*((float)i/(float)(buf.width));
+		float angle = atanf(ABS(pixX)/focalDepth);
+		angle = playerState->angle + (SIGN(pixX)*angle);
+	//	float angle =(playerState->angle+ (PI/6))-(buf.width-i)*((PI/3)/buf.width);
 
 		if(angle >= 2*PI)
 			angle -= 2*PI;
@@ -333,6 +342,7 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 				angle,playerState->angle,
 				&gameMap, buf);
 		//int color = 0xff00ff;
+		Ray.dist = sqrtf(1.0f+ (pixX*pixX))/Ray.dist;
 		DrawColTexture(i, Ray, Texture, buf);
 		//DrawCol(i, drawStart, lineHeight, color, buf);
 	}

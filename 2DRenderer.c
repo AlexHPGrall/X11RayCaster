@@ -2,6 +2,8 @@
 #define SIGN(x) (((x) < 0) ? -1 : 1)
 #define MAX(a, b) ((((a)-(b)) > 0) ? (a) : (b)) 
 #define MIN(a, b) ((((a)-(b)) > 0) ? (b) : (a)) 
+#define SQUARE(X) ((X)*(X))
+#define epsilon 0.0001f
 
 //NOTE: !!! Clipping MUST be implemented from the calling side !!!
 
@@ -85,8 +87,7 @@ DrawCol(int x, int y, int h, int color, FrameBuffer buf)
 static void
 DrawColTexture(int x, RayInfo Ray , BMP_Texture Texture, FrameBuffer buf)
 {
-	//FOV is PI/3
-	float lineHeight= (CellSize*buf.width)/(2*tanf(PI/6)*Ray.dist);
+	float lineHeight= CellSize*Ray.dist*buf.height*((float)8/(float)9);
 	int vStart =0;
 	if(lineHeight >= buf.height)
 	{
