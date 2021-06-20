@@ -139,27 +139,11 @@ CastRay(int x, int y, float angle,float theta, Map *level, FrameBuffer buf)
 	
 }
 
-//this function is stupid 
-static void
-CheckCollision(EntityState *player, Map *level, int direction, FrameBuffer buf)
+//this function is Naive
+static Bool 
+CheckCollision(EntityState *player, Map *level, FrameBuffer buf, float xDisp, float yDisp)
 {
-	float xp = player->xpos, yp = player->ypos;
-	float xl = xp-5, xr= xp + 5 ;
-	float yu = yp -5, yd = yp +5;
-	float x[4]={xl, xl, xr, xr};
-	float y[4]= {yu, yd, yu, yd};
-	
-	for(int i = 0; i<4; ++i)
-	{
-		if(level->layout[GetMapIndex(x[i], y[i], level, buf)])
-		{ 
-
-			player->xpos += direction*0.5f*(cosf(player->angle));
-			player->ypos += direction*0.5f*(sinf(player->angle));
-			CheckCollision(player, level, direction, buf);
-			break;
-		}
-	}
+	return level->layout[GetMapIndex(player->xpos + (int)roundf(xDisp), player->ypos + (int)roundf(yDisp), level, buf)]; 
 }
 
 static void
@@ -189,15 +173,17 @@ DrawMap(Map *level, FrameBuffer buf)
 static void
 DrawPlayer(EntityState player, FrameBuffer buf)
 {
-	int x= (int) roundf(player.xpos);
-	int y= (int) roundf(player.ypos);
+	int x= player.xpos;
+	int y= player.ypos;
 	FillRect(x-5, y-5, 11, 11, 0xf5e942, buf);
 	BresenLine(x, y,
-		roundf((25*cosf(player.angle)) + player.xpos), 
-		roundf((25*sinf(player.angle)) +player.ypos), 
+		(int)((25*cosf(player.angle)) + player.xpos+0.5f), 
+		(int)((25*sinf(player.angle)) +player.ypos+0.5f), 
 		0xf54242, buf);
 }
 
+//This is actually broken
+//it's seems to rely on the fact that textures and Cells are the same size
 void 
 DrawFloor(EntityState *player, float FOVangle, FrameBuffer buf, BMP_Texture Floor, Map *level)
 {	int z =CellSize/2;
@@ -211,7 +197,7 @@ DrawFloor(EntityState *player, float FOVangle, FrameBuffer buf, BMP_Texture Floo
 	{
 		//height of screen is 9/16*width of screen
 		//should have a variable for screen dim
-		//right now a widht of 2(frome -1 to 1) is hard coded
+		//right now a width of 2(from -1 to 1) is hard coded
 		//
 		//we're only considering half the screen hence the 9/16
 		float pixY= (2.0f*h/(buf.height))*(9.0f/16.0f);
@@ -224,13 +210,6 @@ DrawFloor(EntityState *player, float FOVangle, FrameBuffer buf, BMP_Texture Floo
 		float yStart= player->ypos + FloorDist*playerSin - FloorHalfWidth*playerCos;
 		float uStep =((float) (xEnd -xStart)/buf.width);
 		float vStep = ((float)(yEnd-yStart)/buf.width);
-/*
-		int uStart = ((float)(((int)(xStart)%CellSize)*Floor.Width))/(float)CellSize;
-		int vStart = ((float)(((int)(yStart)%CellSize)*Floor.Height))/(float)CellSize;
-		int uEnd= ((float)(((int)(xEnd)%CellSize)*Floor.Width))/(float)CellSize;
-		int vEnd = ((float)(((int)(yEnd)%CellSize)*Floor.Height))/(float)CellSize;
-
-	*/	
 
 		int color =0;
 		uint8_t *bm = Floor.BitMap;
@@ -239,30 +218,18 @@ DrawFloor(EntityState *player, float FOVangle, FrameBuffer buf, BMP_Texture Floo
 			int u = xStart +i*uStep;
 			int v = yStart +i*vStep;
 			
-			/*
-			size_t currentCell = GetMapIndex(u, v, level, buf);
-			if(u<0 || u>= buf.width|| v<0 || v>=buf.height
-			|| currentCell<0 || currentCell >=8*16 || !level->layout[currentCell])
 			{
-				DrawPixel(i, buf.height -1 -h, 0, buf);
-			}
-			else
-			*/
-			{
-			u=u%CellSize;
-			u=u*(Floor.Width/CellSize);
-			v=v%CellSize;
-			v=v*(Floor.Height/CellSize);
-			color=*(bm+(u)*3+(v)*3*Floor.Width);
-			color += *(bm+(u)*3+(v)*3*Floor.Width + 1)<<8;
-			color += *(bm+(u)*3+(v)*3*Floor.Width + 2)<<16;
-			/*
-			if(u==0 || u ==63 || v==0|| v==63)
-				color =0xffffff;
-				*/
-			DrawPixel(i, (buf.height/2)+h, color, buf);
-			DrawPixel(i, (buf.height/2)-h, color, buf);
-			//DrawPixel(i, buf.height-h, z, buf);
+				//NOTE(Alex): I bet the issue is in the next 4 lines
+				u=u%CellSize;
+				u=u*(Floor.Width/CellSize);
+				v=v%CellSize;
+				v=v*(Floor.Height/CellSize);
+				color=*(bm+(u)*3+(v)*3*Floor.Width);
+				color += *(bm+(u)*3+(v)*3*Floor.Width + 1)<<8;
+				color += *(bm+(u)*3+(v)*3*Floor.Width + 2)<<16;
+
+				DrawPixel(i, (buf.height/2)+h, color, buf);
+				DrawPixel(i, (buf.height/2)-h, color, buf);
 
 			}
 		}
@@ -274,7 +241,6 @@ DrawFloor(EntityState *player, float FOVangle, FrameBuffer buf, BMP_Texture Floo
 static void
 GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float dtime, BMP_Texture Texture)
 {
-	int opositdir=1;
 	if(input.q)
 		playerState->angle -= dtime*playerState->rotspeed;
 	else if(input.e)
@@ -300,25 +266,29 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 	}
 	*/
 	 // Note: Tank controls
+	float xDisp, yDisp;
 	if(input.w)
 	{	
-		opositdir= -1;
-		playerState->xpos += dtime*playerState->velocity*(cosf(playerState->angle));
-		playerState->ypos += dtime*playerState->velocity*(sinf(playerState->angle));
+		xDisp = (dtime*playerState->velocity*(cosf(playerState->angle)));
+
+		yDisp = (dtime*playerState->velocity*(sinf(playerState->angle)));
 	}
 	else if(input.s)
 	{
-		opositdir =1;
-		playerState->xpos -= dtime*playerState->velocity*(cosf(playerState->angle));
-		playerState->ypos -= dtime*playerState->velocity*(sinf(playerState->angle));
+		xDisp = - (dtime*playerState->velocity*(cosf(playerState->angle)));
+		yDisp = - (dtime*playerState->velocity*(sinf(playerState->angle)));
 	}
 	//Keep our angle in the range [0,2PI[
 	if(playerState->angle >= 2*PI)
 		playerState->angle -= 2*PI;
 	else if (playerState->angle <0)
 		playerState->angle += 2*PI;
+	if(!CheckCollision(playerState, &gameMap, buf, xDisp, yDisp))
+	{
+		playerState->xpos += (int)roundf(xDisp);
+		playerState->ypos += (int)roundf(yDisp); 
+	}
 
-	CheckCollision(playerState, &gameMap, opositdir, buf);
 
 	FillBuffer(buf, 0x333333);
 	//DrawMap(&gameMap, buf); 
@@ -331,20 +301,18 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 		float pixX = -1.0f+2.0f*((float)i/(float)(buf.width));
 		float angle = atanf(ABS(pixX)/focalDepth);
 		angle = playerState->angle + (SIGN(pixX)*angle);
-	//	float angle =(playerState->angle+ (PI/6))-(buf.width-i)*((PI/3)/buf.width);
 
 		if(angle >= 2*PI)
 			angle -= 2*PI;
 		else if (angle <0)
 			angle += 2*PI;
 		RayInfo Ray ={};
-		Ray= CastRay(floor(playerState->xpos), floor(playerState->ypos), 
+		Ray= CastRay(playerState->xpos, playerState->ypos, 
 				angle,playerState->angle,
 				&gameMap, buf);
 		//int color = 0xff00ff;
 		Ray.dist = sqrtf(1.0f+ (pixX*pixX))/Ray.dist;
 		DrawColTexture(i, Ray, Texture, buf);
-		//DrawCol(i, drawStart, lineHeight, color, buf);
 	}
 	
 	

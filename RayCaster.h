@@ -1,6 +1,6 @@
 #ifndef RAYCASTER_H
 #define RAYCASTER_H
-#define CellSize 64
+#define CellSize 64 
 
 typedef struct{
 	int rows;
@@ -20,7 +20,8 @@ Map gameMap = {8,16,
 		    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}};
 
 typedef struct{
-	float xpos, ypos, angle, velocity, rotspeed;
+	int xpos, ypos;
+	float  angle, velocity, rotspeed;
 }EntityState;
 typedef struct RayInfo
 {
