@@ -1,3 +1,4 @@
+//test
 static int focalDepth =1;
 //Obviously the map struct is completely broken but sufficient to get us 
 //up and running for the ray caster part
