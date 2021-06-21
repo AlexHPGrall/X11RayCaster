@@ -95,16 +95,22 @@ DrawColTexture(i32 x, RayInfo Ray , BMP_Texture Texture, FrameBuffer buf)
 		vStart = vStart/2;
 		lineHeight = buf.height -1;
 	}
-	
-	i32 vEnd = Texture.Height - vStart;
+	i32 vEnd = Texture.Height - vStart-1;
 	f32 vStep = ((f32)(vEnd-vStart)/lineHeight);
 	f32 drawStart = buf.height/2 + lineHeight/2;
 	u32 *bm = Texture.Pixels;
 	i32 u = Ray.offset*((f32)Texture.Width/(f32)CellSize);
-	for(i32 i=0; i<=lineHeight; ++i)
+	for(i32 i=1; i<=lineHeight; ++i)
 	{
 		i32 color =0;
 		i32 v = vStart+ i*vStep;  	
+	if(vStart<0)
+	v = 32;	
+		if(!(u>=0 && v>=0))
+		{
+			printf("start %i end: %i step: %i\n",lineHeight,vEnd,vStep);
+			fflush(stdout);
+		}
 		color=*(bm+u+v*Texture.Width);
 		DrawPixel(x, drawStart-i, color, buf);
 	}
