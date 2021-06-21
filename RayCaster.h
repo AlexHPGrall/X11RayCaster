@@ -34,6 +34,7 @@ Map gameMap = {8,16,
 typedef struct{
 	i32 xpos, ypos;
 	f32 angle, velocity, rotspeed;
+	f32 cosAngle, sinAngle;
 }EntityState;
 typedef struct RayInfo
 {

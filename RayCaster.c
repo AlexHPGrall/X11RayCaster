@@ -26,11 +26,11 @@ GetXOffset(i32 x, Map *level, FrameBuffer buf)
 }
 
 static RayInfo 
-CastRay(i32 x, i32 y, f32 angle,f32 theta, Map *level, FrameBuffer buf)
+CastRay(i32 x, i32 y,i32 stepX, i32 stepY, f32 angle,f32 theta, Map *level, FrameBuffer buf)
 {
 	f32 xIntersect, yIntersect, dx, dy;
 	size_t currentCell = GetMapIndex(x, y , level, buf);
-	i32 stepX, stepY,xoffset, yoffset;
+	i32  xoffset, yoffset;
 	Bool hit=False;
 	xoffset = GetXOffset(x, level, buf); 
 	yoffset = GetYOffset(y, level, buf); 
@@ -51,22 +51,6 @@ CastRay(i32 x, i32 y, f32 angle,f32 theta, Map *level, FrameBuffer buf)
 */
 		dx = ABS(1/ tanf(angle));
 		dy = ABS(1* tanf(angle));
-	if(angle<PI2 || angle > 3*PI2)
-	{
-		stepX =1;
-	}
-	else
-	{
-		stepX =-1;
-	}
-	if(angle > PI)
-	{
-		stepY = -1;
-	}
-	else
-	{
-		stepY = 1;
-	}
 	if(stepX == 1)
 		xIntersect= (CellSize-xoffset)*dy;
 	else
@@ -195,8 +179,8 @@ DrawFloor(EntityState *player, f32 FOVangle, FrameBuffer buf, BMP_Texture Floor,
 {	i32 z =CellSize/2;
 	//we need half the vertical FOV
 	//
-	f32 playerCos = cosf(player->angle);
-	f32 playerSin = sinf(player->angle);
+	f32 playerCos = (player->cosAngle);
+	f32 playerSin = (player->sinAngle);
 	f32 FOVTan = ABS(tanf(FOVangle/2));
 	f32 HalfvFOV = atanf(tanf(FOVangle/2)*((f32)buf.height/buf.width));
 	for(i32 h =0; h<buf.height/2;++h)
@@ -256,6 +240,8 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 d
 		playerState->angle -= 2*PI;
 	else if (playerState->angle <0)
 		playerState->angle += 2*PI;
+	playerState->cosAngle = cosf(playerState->angle);
+	playerState->sinAngle = sinf(playerState->angle);
 	/*
 	 * NOTE: Debug controls
 	if(input.w)
@@ -279,14 +265,14 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 d
 	f32 xDisp=0, yDisp=0;
 	if(input.w)
 	{	
-		xDisp = (dtime*playerState->velocity*(cosf(playerState->angle)));
+		xDisp = (dtime*playerState->velocity*(playerState->cosAngle));
 
-		yDisp = (dtime*playerState->velocity*(sinf(playerState->angle)));
+		yDisp = (dtime*playerState->velocity*(playerState->sinAngle));
 	}
 	else if(input.s)
 	{
-		xDisp = - (dtime*playerState->velocity*(cosf(playerState->angle)));
-		yDisp = - (dtime*playerState->velocity*(sinf(playerState->angle)));
+		xDisp = - (dtime*playerState->velocity*(playerState->cosAngle));
+		yDisp = - (dtime*playerState->velocity*(playerState->sinAngle));
 	}
 
 
@@ -297,7 +283,7 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 d
 	}
 
 
-	FillBuffer(buf, 0x33333333);
+	//FillBuffer(buf, 0x33333333);
 	//DrawMap(&gameMap, buf); 
 	//DrawPlayer(*playerState, buf);
 	
@@ -306,6 +292,9 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 d
 	for(i32 i = 0; i<buf.width; ++i)
 	{
 		f32 pixX = -1.0f+2.0f*((f32)i/(f32)(buf.width));
+		//compute ray direcetion relative to main axis 
+		i32 StepX = SIGN(focalDepth*playerState->cosAngle - pixX*playerState->sinAngle);	
+		i32 StepY = SIGN(focalDepth*playerState->sinAngle + pixX*playerState->cosAngle);	
 		f32 angle = atanf(ABS(pixX)/focalDepth);
 		angle = playerState->angle + (SIGN(pixX)*angle);
 
@@ -314,7 +303,7 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 d
 		else if (angle <0)
 			angle += 2*PI;
 		RayInfo Ray ={};
-		Ray= CastRay(playerState->xpos, playerState->ypos, 
+		Ray= CastRay(playerState->xpos, playerState->ypos, StepX,StepY, 
 				angle,playerState->angle,
 				&gameMap, buf);
 		//i32 color = 0xff00ff;
