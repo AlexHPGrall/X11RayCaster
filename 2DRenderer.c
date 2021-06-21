@@ -8,31 +8,31 @@
 //NOTE: !!! Clipping MUST be implemented from the calling side !!!
 
 static void
-FillBuffer(FrameBuffer buf, int color)
+FillBuffer(FrameBuffer buf, i32 color)
 {	
-	int *p = buf.buffer;
-	for(int i = 0; i < buf.width * buf.height; i++)
+	i32 *p = buf.buffer;
+	for(i32 i = 0; i < buf.width * buf.height; i++)
 			*p++ = color;
 }
 
 static inline void
-DrawPixel(int x, int y, int color, FrameBuffer buf)
+DrawPixel(i32 x, i32 y, i32 color, FrameBuffer buf)
 {
 	*(buf.buffer + (buf.width * y) + x) = color;
 }
 //basic Bresenham Algorithm
 static void
-BresenLine(int x0, int y0, int x1, int y1, int color, FrameBuffer buf)
+BresenLine(i32 x0, i32 y0, i32 x1, i32 y1, i32 color, FrameBuffer buf)
 {
 	Bool swapped = False;
-	int x = x0;
-	int y = y0;
+	i32 x = x0;
+	i32 y = y0;
 
-	int dx = ABS(x1-x0);
-	int dy = ABS(y1-y0);
+	i32 dx = ABS(x1-x0);
+	i32 dy = ABS(y1-y0);
 	//check if the line goes up down left or right for incrementation
-	int signx = SIGN(x1- x0);
-	int signy = SIGN(y1 - y0);
+	i32 signx = SIGN(x1- x0);
+	i32 signy = SIGN(y1 - y0);
 
 	if(dy > dx)
 	{
@@ -43,9 +43,9 @@ BresenLine(int x0, int y0, int x1, int y1, int color, FrameBuffer buf)
 		swapped = True;
 	}
 
-	float err = (2*dy) -dx;
+	f32 err = (2*dy) -dx;
 
-	for(int i = 1; i<= dx; i++)
+	for(i32 i = 1; i<= dx; i++)
 	{
 		DrawPixel(x, y, color, buf);
 		while(err >= 0)
@@ -64,13 +64,13 @@ BresenLine(int x0, int y0, int x1, int y1, int color, FrameBuffer buf)
 	}
 }	
 static void
-DrawLine(int x0, int y0, int x1, int y1, int color, FrameBuffer buf)
+DrawLine(i32 x0, i32 y0, i32 x1, i32 y1, i32 color, FrameBuffer buf)
 { BresenLine(x0, y0, x1, y1, color ,buf);}
 
 static void
-DrawQuad(int x[4], int y[4], int color, FrameBuffer buf)
+DrawQuad(i32 x[4], i32 y[4], i32 color, FrameBuffer buf)
 {
-	for(int i=0; i < 4; ++i)
+	for(i32 i=0; i < 4; ++i)
 	{
 		DrawLine(x[i], y[i], x[i+1], y[i+1], color, buf);
 	}
@@ -78,46 +78,44 @@ DrawQuad(int x[4], int y[4], int color, FrameBuffer buf)
 }
 
 static void
-DrawCol(int x, int y, int h, int color, FrameBuffer buf)
+DrawCol(i32 x, i32 y, i32 h, i32 color, FrameBuffer buf)
 {
-	for(int i=0; i<h; ++i)
+	for(i32 i=0; i<h; ++i)
 		DrawPixel(x, y-i, color, buf);
 }
 
 static void
-DrawColTexture(int x, RayInfo Ray , BMP_Texture Texture, FrameBuffer buf)
+DrawColTexture(i32 x, RayInfo Ray , BMP_Texture Texture, FrameBuffer buf)
 {
-	float lineHeight= CellSize*Ray.dist*buf.height*((float)8/(float)9);
-	int vStart =0;
+	f32 lineHeight= CellSize*Ray.dist*buf.height*((f32)8/(f32)9);
+	i32 vStart =0;
 	if(lineHeight >= buf.height)
 	{
-		vStart = ((float)(lineHeight-buf.height)/(float)lineHeight) * Texture.Height;
+		vStart = ((f32)(lineHeight-buf.height)/(f32)lineHeight) * Texture.Height;
 		vStart = vStart/2;
 		lineHeight = buf.height -1;
 	}
 	
-	int vEnd = Texture.Height - vStart;
-	float vStep = ((float)(vEnd-vStart)/lineHeight);
-	float drawStart = buf.height/2 + lineHeight/2;
-	uint8_t *bm = Texture.BitMap;
-	int u = Ray.offset*((float)Texture.Width/(float)CellSize);
-	for(int i=0; i<=lineHeight; ++i)
+	i32 vEnd = Texture.Height - vStart;
+	f32 vStep = ((f32)(vEnd-vStart)/lineHeight);
+	f32 drawStart = buf.height/2 + lineHeight/2;
+	u32 *bm = Texture.Pixels;
+	i32 u = Ray.offset*((f32)Texture.Width/(f32)CellSize);
+	for(i32 i=0; i<=lineHeight; ++i)
 	{
-		int color =0;
-		int v = vStart+ i*vStep;  	
-		color=*(bm+(u)*3+(v)*3*Texture.Width);
-		color += *(bm+(u)*3+(v)*3*Texture.Width + 1)<<8;
-		color += *(bm+(u)*3+(v)*3*Texture.Width + 2)<<16;
+		i32 color =0;
+		i32 v = vStart+ i*vStep;  	
+		color=*(bm+u+v*Texture.Width);
 		DrawPixel(x, drawStart-i, color, buf);
 	}
 }
 static void
-FillRect(int xorigin, int yorigin, int width, int height, int color, FrameBuffer buf)
+FillRect(i32 xorigin, i32 yorigin, i32 width, i32 height, i32 color, FrameBuffer buf)
 {
-	for(int y = yorigin; y < yorigin + height  ; ++y)
+	for(i32 y = yorigin; y < yorigin + height  ; ++y)
 	{
 
-		for(int x = xorigin ; x  < xorigin + width; ++x)
+		for(i32 x = xorigin ; x  < xorigin + width; ++x)
 		{
 			DrawPixel(x, y, color, buf);
 		}

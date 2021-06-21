@@ -1,37 +1,36 @@
-//test
-static int focalDepth =1;
+static i32 focalDepth =1;
 //Obviously the map struct is completely broken but sufficient to get us 
 //up and running for the ray caster part
 
 static size_t
-GetMapIndex(float x, float y, Map *level, FrameBuffer buf)
+GetMapIndex(f32 x, f32 y, Map *level, FrameBuffer buf)
 {
-	int xoffset = buf.width/2 - (CellSize*level->columns)/2;
-	int yoffset = buf.height/2 - (CellSize*level->rows)/2;
+	i32 xoffset = buf.width/2 - (CellSize*level->columns)/2;
+	i32 yoffset = buf.height/2 - (CellSize*level->rows)/2;
 	size_t j = ((size_t) roundf(x) - xoffset )/CellSize;
 	size_t i = ((size_t) roundf(y) - yoffset )/CellSize;
 	return (i*level->columns + j);
 	
 }
-static int
-GetYOffset(int y, Map *level, FrameBuffer buf)
+static i32
+GetYOffset(i32 y, Map *level, FrameBuffer buf)
 {
-	int offset = buf.height/2 - (CellSize*level->columns)/2;
-	return (y-offset) - (((int)y-offset)/CellSize)*CellSize;
+	i32 offset = buf.height/2 - (CellSize*level->columns)/2;
+	return (y-offset) - (((i32)y-offset)/CellSize)*CellSize;
 }
-static int 
-GetXOffset(int x, Map *level, FrameBuffer buf)
+static i32 
+GetXOffset(i32 x, Map *level, FrameBuffer buf)
 {
-	int offset = buf.width/2 - (CellSize*level->columns)/2;
-	return (x-offset) - (((int)x-offset)/CellSize)*CellSize;
+	i32 offset = buf.width/2 - (CellSize*level->columns)/2;
+	return (x-offset) - (((i32)x-offset)/CellSize)*CellSize;
 }
 
 static RayInfo 
-CastRay(int x, int y, float angle,float theta, Map *level, FrameBuffer buf)
+CastRay(i32 x, i32 y, f32 angle,f32 theta, Map *level, FrameBuffer buf)
 {
-	float xIntersect, yIntersect, dx, dy;
+	f32 xIntersect, yIntersect, dx, dy;
 	size_t currentCell = GetMapIndex(x, y , level, buf);
-	int stepX, stepY,xoffset, yoffset;
+	i32 stepX, stepY,xoffset, yoffset;
 	Bool hit=False;
 	xoffset = GetXOffset(x, level, buf); 
 	yoffset = GetYOffset(y, level, buf); 
@@ -77,7 +76,7 @@ CastRay(int x, int y, float angle,float theta, Map *level, FrameBuffer buf)
 	else
 		yIntersect = yoffset*dx;
 
-	int rx = (x-xoffset), ry = (y-yoffset), side;
+	i32 rx = (x-xoffset), ry = (y-yoffset), side;
 	if(stepX ==1)
 		rx+=CellSize;
 	if(stepY == 1)
@@ -113,26 +112,26 @@ CastRay(int x, int y, float angle,float theta, Map *level, FrameBuffer buf)
 	if(side ==0)
 	{
 		RayInfo ray ={};
-		float DeltaX =ABS(rx-x);
-		float DeltaY = xIntersect;
-		float d = sqrt(DeltaX*DeltaX + DeltaY*DeltaY);
+		f32 DeltaX =ABS(rx-x);
+		f32 DeltaY = xIntersect;
+		f32 d = sqrt(DeltaX*DeltaX + DeltaY*DeltaY);
 		//ray.dist =  d*cos(ABS(theta-angle));
 		ray.dist = sqrtf(SQUARE(rx-x) + SQUARE(stepY*xIntersect));
 		ray.side = side;
-		ray.offset = ((int)floor(y + (stepY*xIntersect))%CellSize);
+		ray.offset = ((i32)floor(y + (stepY*xIntersect))%CellSize);
 		//BresenLine(x, y, rx, y+stepY*xIntersect, 0xff00ff, buf);
 		return ray;
 	}
 	else{
 		
 		RayInfo ray ={};
-		float DeltaX =yIntersect;
-		float DeltaY = ABS(ry-y);
-		float d = sqrt(DeltaX*DeltaX + DeltaY*DeltaY);
+		f32 DeltaX =yIntersect;
+		f32 DeltaY = ABS(ry-y);
+		f32 d = sqrt(DeltaX*DeltaX + DeltaY*DeltaY);
 		//ray.dist = d*cos(ABS(theta-angle));
 		ray.dist = sqrtf(SQUARE(stepX*yIntersect) + SQUARE(ry-y));
 		ray.side = side;
-		ray.offset = (int)floor(x+(stepX*yIntersect))%CellSize;
+		ray.offset = (i32)floor(x+(stepX*yIntersect))%CellSize;
 		//BresenLine(x, y,x+stepX*yIntersect, ry, 0xff00ff, buf);
 		return ray;
 	}
@@ -142,19 +141,19 @@ CastRay(int x, int y, float angle,float theta, Map *level, FrameBuffer buf)
 
 //this function is Naive
 static Bool 
-CheckCollision(EntityState *player, Map *level, FrameBuffer buf, float xDisp, float yDisp)
+CheckCollision(EntityState *player, Map *level, FrameBuffer buf, f32 xDisp, f32 yDisp)
 {
-	return level->layout[GetMapIndex(player->xpos + (int)roundf(xDisp), player->ypos + (int)roundf(yDisp), level, buf)]; 
+	return level->layout[GetMapIndex(player->xpos + (i32)roundf(xDisp), player->ypos + (i32)roundf(yDisp), level, buf)]; 
 }
 
 static void
 DrawMap(Map *level, FrameBuffer buf)
 {
-	int xoffset = buf.width/2 - (CellSize*level->columns)/2;
-	int yoffset = buf.height/2 - (CellSize*level->rows)/2;
-	for(int i = 0; i<level->rows; ++i)
+	i32 xoffset = buf.width/2 - (CellSize*level->columns)/2;
+	i32 yoffset = buf.height/2 - (CellSize*level->rows)/2;
+	for(i32 i = 0; i<level->rows; ++i)
 	{
-		for(int j= 0; j<level->columns; ++j)
+		for(i32 j= 0; j<level->columns; ++j)
 		{
 			if(level->layout[i*level->columns + j])
 			{
@@ -174,60 +173,58 @@ DrawMap(Map *level, FrameBuffer buf)
 static void
 DrawPlayer(EntityState player, FrameBuffer buf)
 {
-	int x= player.xpos;
-	int y= player.ypos;
+	i32 x= player.xpos;
+	i32 y= player.ypos;
 	FillRect(x-5, y-5, 11, 11, 0xf5e942, buf);
 	BresenLine(x, y,
-		(int)((25*cosf(player.angle)) + player.xpos+0.5f), 
-		(int)((25*sinf(player.angle)) +player.ypos+0.5f), 
+		(i32)((25*cosf(player.angle)) + player.xpos+0.5f), 
+		(i32)((25*sinf(player.angle)) +player.ypos+0.5f), 
 		0xf54242, buf);
 }
 
 //This is actually broken
 //it's seems to rely on the fact that textures and Cells are the same size
 void 
-DrawFloor(EntityState *player, float FOVangle, FrameBuffer buf, BMP_Texture Floor, Map *level)
-{	int z =CellSize/2;
+DrawFloor(EntityState *player, f32 FOVangle, FrameBuffer buf, BMP_Texture Floor, Map *level)
+{	i32 z =CellSize/2;
 	//we need half the vertical FOV
 	//
-	float playerCos = cosf(player->angle);
-	float playerSin = sinf(player->angle);
-	float FOVTan = ABS(tanf(FOVangle/2));
-	float HalfvFOV = atanf(tanf(FOVangle/2)*((float)buf.height/buf.width));
-	for(int h =0; h<buf.height/2;++h)
+	f32 playerCos = cosf(player->angle);
+	f32 playerSin = sinf(player->angle);
+	f32 FOVTan = ABS(tanf(FOVangle/2));
+	f32 HalfvFOV = atanf(tanf(FOVangle/2)*((f32)buf.height/buf.width));
+	for(i32 h =0; h<buf.height/2;++h)
 	{
 		//height of screen is 9/16*width of screen
 		//should have a variable for screen dim
 		//right now a width of 2(from -1 to 1) is hard coded
 		//
 		//we're only considering half the screen hence the 9/16
-		float pixY= (2.0f*h/(buf.height))*(9.0f/16.0f);
-		float FloorDist =focalDepth*0.5f*CellSize/pixY;
+		f32 pixY= (2.0f*h/(buf.height))*(9.0f/16.0f);
+		f32 FloorDist =focalDepth*0.5f*CellSize/pixY;
 		//FloorHalfWidth is actually FloorDist divided by half screen width
-		float FloorHalfWidth = FloorDist;  
-		float xEnd= player->xpos + FloorDist*playerCos - FloorHalfWidth*playerSin;
-		float xStart = player->xpos + FloorDist*playerCos + FloorHalfWidth*playerSin;
-		float yEnd = player->ypos + FloorDist*playerSin + FloorHalfWidth*playerCos;
-		float yStart= player->ypos + FloorDist*playerSin - FloorHalfWidth*playerCos;
-		float uStep =((float) (xEnd -xStart)/buf.width);
-		float vStep = ((float)(yEnd-yStart)/buf.width);
+		f32 FloorHalfWidth = FloorDist;  
+		f32 xEnd= player->xpos + FloorDist*playerCos - FloorHalfWidth*playerSin;
+		f32 xStart = player->xpos + FloorDist*playerCos + FloorHalfWidth*playerSin;
+		f32 yEnd = player->ypos + FloorDist*playerSin + FloorHalfWidth*playerCos;
+		f32 yStart= player->ypos + FloorDist*playerSin - FloorHalfWidth*playerCos;
+		f32 uStep =((f32) (xEnd -xStart)/buf.width);
+		f32 vStep = ((f32)(yEnd-yStart)/buf.width);
 
-		int color =0;
-		uint8_t *bm = Floor.BitMap;
-		for(int i=0; i<buf.width; ++i)
+		i32 color =0;
+		u32 *bm = Floor.Pixels;
+		for(i32 i=0; i<buf.width; ++i)
 		{
-			int u = xStart +i*uStep;
-			int v = yStart +i*vStep;
+			i32 u = xStart +i*uStep;
+			i32 v = yStart +i*vStep;
 			
 			{
 				//NOTE(Alex): I bet the issue is in the next 4 lines
-				u=u%CellSize;
+				u=ABS(u%CellSize);
 				u=u*(Floor.Width/CellSize);
-				v=v%CellSize;
+				v=ABS(v%CellSize);
 				v=v*(Floor.Height/CellSize);
-				color=*(bm+(u)*3+(v)*3*Floor.Width);
-				color += *(bm+(u)*3+(v)*3*Floor.Width + 1)<<8;
-				color += *(bm+(u)*3+(v)*3*Floor.Width + 2)<<16;
+				color=*(bm+u+v*Floor.Width);
 
 				DrawPixel(i, (buf.height/2)+h, color, buf);
 				DrawPixel(i, (buf.height/2)-h, color, buf);
@@ -240,7 +237,8 @@ DrawFloor(EntityState *player, float FOVangle, FrameBuffer buf, BMP_Texture Floo
 
 }
 static void
-GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float dtime, BMP_Texture Texture)
+GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 dtime,
+	       	BMP_Texture Texture, GameMemory Memory)
 {
 	if(input.q)
 		playerState->angle -= dtime*playerState->rotspeed;
@@ -267,7 +265,7 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 	}
 	*/
 	 // Note: Tank controls
-	float xDisp, yDisp;
+	f32 xDisp, yDisp;
 	if(input.w)
 	{	
 		xDisp = (dtime*playerState->velocity*(cosf(playerState->angle)));
@@ -286,21 +284,21 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 		playerState->angle += 2*PI;
 	if(!CheckCollision(playerState, &gameMap, buf, xDisp, yDisp))
 	{
-		playerState->xpos += (int)roundf(xDisp);
-		playerState->ypos += (int)roundf(yDisp); 
+		playerState->xpos += (i32)roundf(xDisp);
+		playerState->ypos += (i32)roundf(yDisp); 
 	}
 
 
-	FillBuffer(buf, 0x333333);
-	//DrawMap(&gameMap, buf); 
-	//DrawPlayer(*playerState, buf);
+	FillBuffer(buf, 0x33333333);
+	DrawMap(&gameMap, buf); 
+	DrawPlayer(*playerState, buf);
 	
-	DrawFloor(playerState, PI/3, buf, Texture, &gameMap);
+	//DrawFloor(playerState, PI/3, buf, Texture, &gameMap);
 		
-	for(int i = 0; i<buf.width; ++i)
+	for(i32 i = 0; i<buf.width; ++i)
 	{
-		float pixX = -1.0f+2.0f*((float)i/(float)(buf.width));
-		float angle = atanf(ABS(pixX)/focalDepth);
+		f32 pixX = -1.0f+2.0f*((f32)i/(f32)(buf.width));
+		f32 angle = atanf(ABS(pixX)/focalDepth);
 		angle = playerState->angle + (SIGN(pixX)*angle);
 
 		if(angle >= 2*PI)
@@ -311,9 +309,9 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, float
 		Ray= CastRay(playerState->xpos, playerState->ypos, 
 				angle,playerState->angle,
 				&gameMap, buf);
-		//int color = 0xff00ff;
-		Ray.dist = sqrtf(1.0f+ (pixX*pixX))/Ray.dist;
-		DrawColTexture(i, Ray, Texture, buf);
+		//i32 color = 0xff00ff;
+		//Ray.dist = sqrtf(1.0f+ (pixX*pixX))/Ray.dist;
+		//DrawColTexture(i, Ray, Texture, buf);
 	}
 	
 	

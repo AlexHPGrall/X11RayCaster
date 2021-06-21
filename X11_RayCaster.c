@@ -8,13 +8,18 @@
 #include <stdint.h>
 #include <time.h>
 #include <math.h>
+#include <assert.h>
+
+#define Assert(e) assert(e)
+
+#include "./RayCaster.h"
 
 #define NIL (0)
 #define PI M_PI
 #define PI2 M_PI_2
 //TODO: define a bitmap struct with a width, height and a pointer to a buffer for our XImage
-static int width = 1280; 
-static int height =720;
+static i32 width = 1280; 
+static i32 height =720;
 
 typedef struct KeyboardInput
 {
@@ -23,25 +28,24 @@ typedef struct KeyboardInput
 
 typedef struct FrameBuffer
 {
-	int width;
-	int height;
-	int *buffer;
+	i32 width;
+	i32 height;
+	i32 *buffer;
 }FrameBuffer;
 
-#include "./RayCaster.h"
 #include "./2DUtils.c"
 #include "./2DRenderer.c"
 #include "./RayCaster.c"
 
 /*Platform layer of the RayTracer*/  
-int main(int argc, char** argv)
+i32 main(i32 argc, char** argv)
 {
 	//setup time counter
 	struct timespec time={};
 	clock_gettime(CLOCK_MONOTONIC_RAW, &time);
 	long prevtime = time.tv_nsec;
 	long currenttime; 
-	double elapsedtime, fps;
+	f64 elapsedtime, fps;
 	
 	//Create a connection with the X server
 	Display* display = XOpenDisplay(NULL);
@@ -52,9 +56,9 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-	int screen = DefaultScreen(display);
-	uint32_t white = WhitePixel(display, screen);
-	uint32_t black = BlackPixel(display, screen);
+	i32 screen = DefaultScreen(display);
+	u32 white = WhitePixel(display, screen);
+	u32 black = BlackPixel(display, screen);
 
 	Window win = XCreateSimpleWindow(display, 
 			RootWindow(display, screen), 
@@ -81,11 +85,11 @@ int main(int argc, char** argv)
 	/*XImage buffer that we will manipulate directly in our renderer
 	  pixels are 32 bits wide, the format is 0xXXRRGGBB
 NOTE: malloc might not deliver optimal performande, should try to allocate the buffer in the server shared memory*/
-	char *ImageBuffer = (char *) 
-		malloc(width * height* 4 * sizeof(char)); 
+	u8 *ImageBuffer = (u8 *) 
+		malloc(width * height* 4 * sizeof(u8)); 
 
-	int *p = (int *) ImageBuffer;
-	for(int i=0; i<width*height; ++i)
+	i32 *p = (i32 *) ImageBuffer;
+	for(i32 i=0; i<width*height; ++i)
 	{
 		*p++ = 0x333333;
 	}
@@ -94,15 +98,21 @@ NOTE: malloc might not deliver optimal performande, should try to allocate the b
 	XImage *Image =
 		XCreateImage(display, CopyFromParent, 24, ZPixmap,
 				0, ImageBuffer, width, height, 32, 0);
-	FrameBuffer ImageFrameBuffer = {width, height,(int *)ImageBuffer};
+	FrameBuffer ImageFrameBuffer = {width, height,(i32 *)ImageBuffer};
 	KeyboardInput KbInput = {0};
 	//NOTE: XEvent are defined as a union over all the event types
 	XEvent event = {};
 
-	EntityState state = {width/2, height/2,	PI/4, 200, 1.6};  
+	EntityState state = {width/2-10, height/2,	PI/4, 200, 1.6};  
 
+	//It might be smart to have way to fetch the texture size
+	//for now it'll be 64x64
 	BMP_Texture WallTexture = {};
+	WallTexture.Pixels = (u32 *)malloc(64*64*sizeof(u32));
 	LoadBMP("colorstone.bmp", &WallTexture);
+	Assert(WallTexture.Height == 64 && WallTexture.Width == 64);
+	GameMemory Mem = {};
+	Mem.WallDist = (f32 *)malloc(width*sizeof(f32));
 	//Main Loop
 	for(;;)
 	{
@@ -212,10 +222,10 @@ NOTE: malloc might not deliver optimal performande, should try to allocate the b
 //		fprintf(stdout, "%0.2fms / %0.2ffps\n", elapsedtime, fps);
 		prevtime = currenttime;
 
-		GameUpdate(KbInput, ImageFrameBuffer, &state, elapsedtime/1000, WallTexture);
+		GameUpdate(KbInput, ImageFrameBuffer, &state, elapsedtime/1000, WallTexture, Mem);
 		/*
-		int *Pixel = ImageFrameBuffer.buffer;
-		uint8_t *bm = WallTexture.BitMap;
+		i32 *Pixel = ImageFrameBuffer.buffer;
+		i32 *bm = WallTexture.Pixels;
 
 				color=*(bm+(j%64)*3+(i%64)*3*64);
 				color += *(bm+(j%64)*3+(i%64)*3*64 + 1)<<8;
