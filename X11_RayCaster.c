@@ -85,8 +85,13 @@ i32 main(i32 argc, char** argv)
 	/*XImage buffer that we will manipulate directly in our renderer
 	  pixels are 32 bits wide, the format is 0xXXRRGGBB
 NOTE: malloc might not deliver optimal performande, should try to allocate the buffer in the server shared memory*/
-	u8 *ImageBuffer = (u8 *) 
-		malloc(width * height* 4 * sizeof(u8)); 
+	u32* ImageBuffer = (u32 *) 
+		malloc(width * height* sizeof(u32)); 
+	if(!ImageBuffer)
+	{
+		printf("malloc failed");
+		fflush(stdout);
+	}
 
 	i32 *p = (i32 *) ImageBuffer;
 	for(i32 i=0; i<width*height; ++i)
@@ -97,13 +102,13 @@ NOTE: malloc might not deliver optimal performande, should try to allocate the b
 	  last byte might be useful for alpha channel*/
 	XImage *Image =
 		XCreateImage(display, CopyFromParent, 24, ZPixmap,
-				0, ImageBuffer, width, height, 32, 0);
+				0, (u8 *)ImageBuffer, width, height, 32, 0);
 	FrameBuffer ImageFrameBuffer = {width, height,(i32 *)ImageBuffer};
 	KeyboardInput KbInput = {0};
 	//NOTE: XEvent are defined as a union over all the event types
 	XEvent event = {};
 
-	EntityState state = {width/2-10, height/2,	PI/4, 200, 1.6};  
+	EntityState state = {(width/2)-10, height/2, PI/4, 200, 1.6};  
 
 	//It might be smart to have way to fetch the texture size
 	//for now it'll be 64x64
@@ -111,7 +116,7 @@ NOTE: malloc might not deliver optimal performande, should try to allocate the b
 	WallTexture.Pixels = (u32 *)malloc(64*64*sizeof(u32));
 	LoadBMP("colorstone.bmp", &WallTexture);
 	Assert(WallTexture.Height == 64 && WallTexture.Width == 64);
-	GameMemory Mem = {};
+	GameMemory Mem = {0};
 	Mem.WallDist = (f32 *)malloc(width*sizeof(f32));
 	//Main Loop
 	for(;;)
@@ -222,7 +227,7 @@ NOTE: malloc might not deliver optimal performande, should try to allocate the b
 //		fprintf(stdout, "%0.2fms / %0.2ffps\n", elapsedtime, fps);
 		prevtime = currenttime;
 
-		GameUpdate(KbInput, ImageFrameBuffer, &state, elapsedtime/1000, WallTexture, Mem);
+		GameUpdate(KbInput, ImageFrameBuffer, &state, elapsedtime/1000.0f, WallTexture, Mem);
 		/*
 		i32 *Pixel = ImageFrameBuffer.buffer;
 		i32 *bm = WallTexture.Pixels;

@@ -1,14 +1,14 @@
 static i32 focalDepth =1;
-//Obviously the map struct is completely broken but sufficient to get us 
-//up and running for the ray caster part
 
+//the offset is just a debug thing
+//it'll go away when we integrate the minimap
 static size_t
-GetMapIndex(f32 x, f32 y, Map *level, FrameBuffer buf)
+GetMapIndex(i32 x, i32 y, Map *level, FrameBuffer buf)
 {
 	i32 xoffset = buf.width/2 - (CellSize*level->columns)/2;
 	i32 yoffset = buf.height/2 - (CellSize*level->rows)/2;
-	size_t j = ((size_t) roundf(x) - xoffset )/CellSize;
-	size_t i = ((size_t) roundf(y) - yoffset )/CellSize;
+	size_t j = (x - xoffset)/CellSize;
+	size_t i = (y - yoffset )/CellSize;
 	return (i*level->columns + j);
 	
 }
@@ -143,7 +143,13 @@ CastRay(i32 x, i32 y, f32 angle,f32 theta, Map *level, FrameBuffer buf)
 static Bool 
 CheckCollision(EntityState *player, Map *level, FrameBuffer buf, f32 xDisp, f32 yDisp)
 {
-	return level->layout[GetMapIndex(player->xpos + (i32)roundf(xDisp), player->ypos + (i32)roundf(yDisp), level, buf)]; 
+	i32 xIndex = player->xpos + (i32)roundf(xDisp);
+	i32 yIndex = player->ypos + (i32)roundf(yDisp);
+	size_t mapIndex = GetMapIndex(xIndex, yIndex, level, buf);
+	Assert(mapIndex <level->rows*level->columns &&  mapIndex>=0);
+	
+	
+	return level->layout[mapIndex]; 
 }
 
 static void
@@ -245,6 +251,11 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 d
 	else if(input.e)
 		playerState->angle += dtime*playerState->rotspeed;
 
+	//Keep our angle in the range [0,2PI[
+	if(playerState->angle >= 2*PI)
+		playerState->angle -= 2*PI;
+	else if (playerState->angle <0)
+		playerState->angle += 2*PI;
 	/*
 	 * NOTE: Debug controls
 	if(input.w)
@@ -265,7 +276,7 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 d
 	}
 	*/
 	 // Note: Tank controls
-	f32 xDisp, yDisp;
+	f32 xDisp=0, yDisp=0;
 	if(input.w)
 	{	
 		xDisp = (dtime*playerState->velocity*(cosf(playerState->angle)));
@@ -277,11 +288,8 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 d
 		xDisp = - (dtime*playerState->velocity*(cosf(playerState->angle)));
 		yDisp = - (dtime*playerState->velocity*(sinf(playerState->angle)));
 	}
-	//Keep our angle in the range [0,2PI[
-	if(playerState->angle >= 2*PI)
-		playerState->angle -= 2*PI;
-	else if (playerState->angle <0)
-		playerState->angle += 2*PI;
+
+
 	if(!CheckCollision(playerState, &gameMap, buf, xDisp, yDisp))
 	{
 		playerState->xpos += (i32)roundf(xDisp);
@@ -290,10 +298,10 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 d
 
 
 	FillBuffer(buf, 0x33333333);
-	DrawMap(&gameMap, buf); 
-	DrawPlayer(*playerState, buf);
+	//DrawMap(&gameMap, buf); 
+	//DrawPlayer(*playerState, buf);
 	
-	//DrawFloor(playerState, PI/3, buf, Texture, &gameMap);
+	DrawFloor(playerState, PI/3, buf, Texture, &gameMap);
 		
 	for(i32 i = 0; i<buf.width; ++i)
 	{
@@ -310,8 +318,8 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 d
 				angle,playerState->angle,
 				&gameMap, buf);
 		//i32 color = 0xff00ff;
-		//Ray.dist = sqrtf(1.0f+ (pixX*pixX))/Ray.dist;
-		//DrawColTexture(i, Ray, Texture, buf);
+		Ray.dist = sqrtf(1.0f+ (pixX*pixX))/Ray.dist;
+		DrawColTexture(i, Ray, Texture, buf);
 	}
 	
 	
