@@ -76,3 +76,45 @@ LoadBMP(char *file, BMP_Texture *texture)
 
 
 }
+
+static void
+LoadBMPFlipped(char *file, BMP_Texture *texture)
+{
+    FILE *fp=fopen(file,"rb");
+    BMP_Header Header;
+    if(fp)
+    {
+        fread(&Header, sizeof(BMP_Header), 1,fp);
+        texture->Width = Header.Width;
+        texture->Height = Header.Height;
+        u32 Pitch = (Header.Width * Header.BitsPerPixel)/8;
+        //account for 4-bytes boundary padding
+        u32 offset=(Pitch)%4;
+        if(offset != 0)
+        {
+            offset =4-offset;
+        }
+
+        //Loading the Pixels data
+        //Note: the Pixels is stored BottomToTop
+        //But we're loading it Top to Bottom
+        for(i32 h =0; h<Header.Height; ++h)
+        {
+            fseek(fp, Header.DataOffset + h*(Pitch+offset), SEEK_SET);
+            for(i32 w=0; w<Header.Width; ++w)
+            {
+            	u32 *Pixel=  (u32*)texture->Pixels +h+w*Header.Height;
+                fread(Pixel, Header.BitsPerPixel/8, 1, fp);
+            }
+        }
+        
+
+        fclose(fp);
+    }
+    else
+    {
+        fprintf(stdout, "Couldn't open %s\n", file);
+    }
+
+
+}

@@ -26,7 +26,7 @@ GetXOffset(i32 x, Map *level, FrameBuffer buf)
 }
 
 static RayInfo 
-CastRay(i32 x, i32 y,i32 stepX, i32 stepY, f32 angle,f32 theta, Map *level, FrameBuffer buf)
+CastRay(i32 x, i32 y,i32 stepX, i32 stepY, f32 tanAngle, Map *level, FrameBuffer buf)
 {
 	f32 xIntersect, yIntersect, dx, dy;
 	size_t currentCell = GetMapIndex(x, y , level, buf);
@@ -49,8 +49,8 @@ CastRay(i32 x, i32 y,i32 stepX, i32 stepY, f32 angle,f32 theta, Map *level, Fram
 		dy = ABS(1* tanf(angle));
 	}
 */
-		dx = ABS(1/ tanf(angle));
-		dy = ABS(1* tanf(angle));
+		dx = ABS(1/ tanAngle);
+		dy = ABS(1* tanAngle);
 	if(stepX == 1)
 		xIntersect= (CellSize-xoffset)*dy;
 	else
@@ -96,11 +96,7 @@ CastRay(i32 x, i32 y,i32 stepX, i32 stepY, f32 angle,f32 theta, Map *level, Fram
 	if(side ==0)
 	{
 		RayInfo ray ={};
-		f32 DeltaX =ABS(rx-x);
-		f32 DeltaY = xIntersect;
-		f32 d = sqrt(DeltaX*DeltaX + DeltaY*DeltaY);
-		//ray.dist =  d*cos(ABS(theta-angle));
-		ray.dist = sqrtf(SQUARE(rx-x) + SQUARE(stepY*xIntersect));
+		ray.dist=ABS(rx-x);	
 		ray.side = side;
 		ray.offset = ((i32)floor(y + (stepY*xIntersect))%CellSize);
 		//BresenLine(x, y, rx, y+stepY*xIntersect, 0xff00ff, buf);
@@ -109,11 +105,7 @@ CastRay(i32 x, i32 y,i32 stepX, i32 stepY, f32 angle,f32 theta, Map *level, Fram
 	else{
 		
 		RayInfo ray ={};
-		f32 DeltaX =yIntersect;
-		f32 DeltaY = ABS(ry-y);
-		f32 d = sqrt(DeltaX*DeltaX + DeltaY*DeltaY);
-		//ray.dist = d*cos(ABS(theta-angle));
-		ray.dist = sqrtf(SQUARE(stepX*yIntersect) + SQUARE(ry-y));
+		ray.dist = yIntersect;
 		ray.side = side;
 		ray.offset = (i32)floor(x+(stepX*yIntersect))%CellSize;
 		//BresenLine(x, y,x+stepX*yIntersect, ry, 0xff00ff, buf);
@@ -167,22 +159,20 @@ DrawPlayer(EntityState player, FrameBuffer buf)
 	i32 y= player.ypos;
 	FillRect(x-5, y-5, 11, 11, 0xf5e942, buf);
 	BresenLine(x, y,
-		(i32)((25*cosf(player.angle)) + player.xpos+0.5f), 
-		(i32)((25*sinf(player.angle)) +player.ypos+0.5f), 
+		(i32)((25*player.cosAngle) + player.xpos+0.5f), 
+		(i32)((25*player.sinAngle) +player.ypos+0.5f), 
 		0xf54242, buf);
 }
 
 //This is actually broken
 //it's seems to rely on the fact that textures and Cells are the same size
 void 
-DrawFloor(EntityState *player, f32 FOVangle, FrameBuffer buf, BMP_Texture Floor, Map *level)
+DrawFloor(EntityState *player, FrameBuffer buf, BMP_Texture Floor,BMP_Texture Ceiling,  Map *level)
 {	i32 z =CellSize/2;
 	//we need half the vertical FOV
 	//
 	f32 playerCos = (player->cosAngle);
 	f32 playerSin = (player->sinAngle);
-	f32 FOVTan = ABS(tanf(FOVangle/2));
-	f32 HalfvFOV = atanf(tanf(FOVangle/2)*((f32)buf.height/buf.width));
 	for(i32 h =0; h<buf.height/2;++h)
 	{
 		//height of screen is 9/16*width of screen
@@ -203,6 +193,7 @@ DrawFloor(EntityState *player, f32 FOVangle, FrameBuffer buf, BMP_Texture Floor,
 
 		i32 color =0;
 		u32 *bm = Floor.Pixels;
+		u32 *cm = Ceiling.Pixels;
 		for(i32 i=0; i<buf.width; ++i)
 		{
 			i32 u = xStart +i*uStep;
@@ -214,9 +205,11 @@ DrawFloor(EntityState *player, f32 FOVangle, FrameBuffer buf, BMP_Texture Floor,
 				u=u*(Floor.Width/CellSize);
 				v=ABS(v%CellSize);
 				v=v*(Floor.Height/CellSize);
+				//there seems to be a bug thats fixed by swapping u and v
 				color=*(bm+u+v*Floor.Width);
 
 				DrawPixel(i, (buf.height/2)+h, color, buf);
+				color=*(cm+u+v*Ceiling.Width);
 				DrawPixel(i, (buf.height/2)-h, color, buf);
 
 			}
@@ -228,7 +221,7 @@ DrawFloor(EntityState *player, f32 FOVangle, FrameBuffer buf, BMP_Texture Floor,
 }
 static void
 GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 dtime,
-	       	BMP_Texture Texture, GameMemory Memory)
+	       	BMP_Texture WallTexture,BMP_Texture FloorTexture,BMP_Texture CeilingTexture, GameMemory Memory)
 {
 	if(input.q)
 		playerState->angle -= dtime*playerState->rotspeed;
@@ -276,39 +269,41 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 d
 	}
 
 
-	if(!CheckCollision(playerState, &gameMap, buf, xDisp, yDisp))
+	//Check for wall colision with some padding to avoid getting too close to walls
+	if(!CheckCollision(playerState, &gameMap, buf, xDisp+2.0f*SIGN(xDisp), yDisp+2.0f*SIGN(yDisp)))
 	{
 		playerState->xpos += (i32)roundf(xDisp);
 		playerState->ypos += (i32)roundf(yDisp); 
 	}
 
 
-	//FillBuffer(buf, 0x33333333);
+	FillBuffer(buf, 0x33333333);
 	//DrawMap(&gameMap, buf); 
 	//DrawPlayer(*playerState, buf);
 	
-	DrawFloor(playerState, PI/3, buf, Texture, &gameMap);
+	DrawFloor(playerState, buf, FloorTexture,CeilingTexture, &gameMap);
 		
+	f32 PlayerTan = playerState->sinAngle / playerState->cosAngle;
 	for(i32 i = 0; i<buf.width; ++i)
 	{
 		f32 pixX = -1.0f+2.0f*((f32)i/(f32)(buf.width));
 		//compute ray direcetion relative to main axis 
-		i32 StepX = SIGN(focalDepth*playerState->cosAngle - pixX*playerState->sinAngle);	
-		i32 StepY = SIGN(focalDepth*playerState->sinAngle + pixX*playerState->cosAngle);	
-		f32 angle = atanf(ABS(pixX)/focalDepth);
-		angle = playerState->angle + (SIGN(pixX)*angle);
+		f32 RayX =focalDepth*playerState->cosAngle - pixX*playerState->sinAngle; 
+		f32 RayY =focalDepth*playerState->sinAngle + pixX*playerState->cosAngle;
+		i32 StepX = SIGN(RayX);	
+		i32 StepY = SIGN(RayY);	
+		f32 tanRay = (ABS(pixX)/focalDepth);
+		tanRay = (PlayerTan + SIGN(pixX)*tanRay)/(1-SIGN(pixX)*tanRay*PlayerTan);
 
-		if(angle >= 2*PI)
-			angle -= 2*PI;
-		else if (angle <0)
-			angle += 2*PI;
 		RayInfo Ray ={};
 		Ray= CastRay(playerState->xpos, playerState->ypos, StepX,StepY, 
-				angle,playerState->angle,
+				tanRay,
 				&gameMap, buf);
 		//i32 color = 0xff00ff;
-		Ray.dist = sqrtf(1.0f+ (pixX*pixX))/Ray.dist;
-		DrawColTexture(i, Ray, Texture, buf);
+		
+		//we really are after a ratio of similar triangle side length
+		Ray.dist =(f32)ABS(RayX)/Ray.dist; 
+		DrawColTexture(i, Ray, WallTexture, buf);
 	}
 	
 	

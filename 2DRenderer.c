@@ -104,14 +104,9 @@ DrawColTexture(i32 x, RayInfo Ray , BMP_Texture Texture, FrameBuffer buf)
 	{
 		i32 color =0;
 		i32 v = vStart+ i*vStep;  	
-	if(vStart<0)
-	v = 32;	
-		if(!(u>=0 && v>=0))
-		{
-			printf("start %i end: %i step: %i\n",lineHeight,vEnd,vStep);
-			fflush(stdout);
-		}
-		color=*(bm+u+v*Texture.Width);
+		Assert((u>=0 && u<64 && v<64 && v>=0));
+		//we swap u and v because our wall texture is stored by columns
+		color=*(bm+v+u*Texture.Width);
 		DrawPixel(x, drawStart-i, color, buf);
 	}
 }
