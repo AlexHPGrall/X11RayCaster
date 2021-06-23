@@ -108,7 +108,7 @@ NOTE: malloc might not deliver optimal performande, should try to allocate the b
 	//NOTE: XEvent are defined as a union over all the event types
 	XEvent event = {};
 
-	EntityState state = {(width/2)-10, height/2, PI/4, 200, 1.6};  
+	EntityState state = {(width/2)-10, height/2, PI/4, CellSize*200/64.0f, 1.6};  
 
 	//It might be smart to have way to fetch the texture size
 	//for now it'll be 64x64

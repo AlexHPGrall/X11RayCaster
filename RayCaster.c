@@ -98,7 +98,7 @@ CastRay(i32 x, i32 y,i32 stepX, i32 stepY, f32 tanAngle, Map *level, FrameBuffer
 		RayInfo ray ={};
 		ray.dist=ABS(rx-x);	
 		ray.side = side;
-		ray.offset = ((i32)floor(y + (stepY*xIntersect))%CellSize);
+		ray.offset = ABS((i32)floor(y + (stepY*xIntersect))%CellSize);
 		//BresenLine(x, y, rx, y+stepY*xIntersect, 0xff00ff, buf);
 		return ray;
 	}
@@ -107,7 +107,7 @@ CastRay(i32 x, i32 y,i32 stepX, i32 stepY, f32 tanAngle, Map *level, FrameBuffer
 		RayInfo ray ={};
 		ray.dist = yIntersect;
 		ray.side = side;
-		ray.offset = (i32)floor(x+(stepX*yIntersect))%CellSize;
+		ray.offset =ABS( (i32)floor(x+(stepX*yIntersect))%CellSize);
 		//BresenLine(x, y,x+stepX*yIntersect, ry, 0xff00ff, buf);
 		return ray;
 	}
@@ -169,8 +169,11 @@ DrawPlayer(EntityState player, FrameBuffer buf)
 void 
 DrawFloor(EntityState *player, FrameBuffer buf, BMP_Texture Floor,BMP_Texture Ceiling,  Map *level)
 {	i32 z =CellSize/2;
-	//we need half the vertical FOV
-	//
+	//we still need that stupid offset for correctness
+	//should get rid of it asap
+	i32 xoffset = buf.width/2 - (CellSize*level->columns)/2;
+	i32 yoffset = buf.height/2 - (CellSize*level->rows)/2;
+
 	f32 playerCos = (player->cosAngle);
 	f32 playerSin = (player->sinAngle);
 	for(i32 h =0; h<buf.height/2;++h)
@@ -196,16 +199,15 @@ DrawFloor(EntityState *player, FrameBuffer buf, BMP_Texture Floor,BMP_Texture Ce
 		u32 *cm = Ceiling.Pixels;
 		for(i32 i=0; i<buf.width; ++i)
 		{
-			i32 u = xStart +i*uStep;
-			i32 v = yStart +i*vStep;
+			i32 u = xStart +i*uStep - xoffset;
+			i32 v = yStart +i*vStep - yoffset;
 			
 			{
 				//NOTE(Alex): I bet the issue is in the next 4 lines
 				u=ABS(u%CellSize);
-				u=u*(Floor.Width/CellSize);
+				u=u*((f32)Floor.Width/(f32)CellSize);
 				v=ABS(v%CellSize);
-				v=v*(Floor.Height/CellSize);
-				//there seems to be a bug thats fixed by swapping u and v
+				v=v*((f32)Floor.Height/(f32)CellSize);
 				color=*(bm+u+v*Floor.Width);
 
 				DrawPixel(i, (buf.height/2)+h, color, buf);
@@ -270,7 +272,7 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 d
 
 
 	//Check for wall colision with some padding to avoid getting too close to walls
-	if(!CheckCollision(playerState, &gameMap, buf, xDisp+2.0f*SIGN(xDisp), yDisp+2.0f*SIGN(yDisp)))
+	if(!CheckCollision(playerState, &gameMap, buf, xDisp+4.0f*SIGN(xDisp), yDisp+4.0f*SIGN(yDisp)))
 	{
 		playerState->xpos += (i32)roundf(xDisp);
 		playerState->ypos += (i32)roundf(yDisp); 
@@ -302,8 +304,10 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 d
 		//i32 color = 0xff00ff;
 		
 		//we really are after a ratio of similar triangle side length
+		if(Ray.dist<epsilon)
+			Ray.dist=epsilon;
 		Ray.dist =(f32)ABS(RayX)/Ray.dist; 
-		DrawColTexture(i, Ray, WallTexture, buf);
+		DrawWallCol(i, Ray, WallTexture, buf);
 	}
 	
 	

@@ -85,7 +85,7 @@ DrawCol(i32 x, i32 y, i32 h, i32 color, FrameBuffer buf)
 }
 
 static void
-DrawColTexture(i32 x, RayInfo Ray , BMP_Texture Texture, FrameBuffer buf)
+DrawWallCol(i32 x, RayInfo Ray , BMP_Texture Texture, FrameBuffer buf)
 {
 	f32 lineHeight= CellSize*Ray.dist*buf.height*((f32)8/(f32)9);
 	i32 vStart =0;
@@ -104,11 +104,36 @@ DrawColTexture(i32 x, RayInfo Ray , BMP_Texture Texture, FrameBuffer buf)
 	{
 		i32 color =0;
 		i32 v = vStart+ i*vStep;  	
+		
+		
+#if DEBUG_ON 
 		Assert((u>=0 && u<64 && v<64 && v>=0));
+#endif
 		//we swap u and v because our wall texture is stored by columns
 		color=*(bm+v+u*Texture.Width);
 		DrawPixel(x, drawStart-i, color, buf);
 	}
+}
+
+static void
+DrawSprite(BMP_Texture Sprite, EntityState Entity,EntityState Player,f32 Dist, f32 *WallDist, FrameBuffer buf)
+{
+	i32 u = Entity.xpos/Dist;
+	i32 w = CellSize/Dist;
+	u=((u+1)/2)*buf.width;
+	w= w*buf.width/2;
+	i32 h = w;
+	if(u+w/2< 0 || u-w >= buf.width)
+	       return;	
+	for(i32 x =0; x<w/2; ++x)
+	{
+		if(u-x >=0 &&u-x< buf.width&& Dist < WallDist[u-x])
+			DrawSpriteCol(u-x, Sprite, w, buf);
+		if(u+x >=0 &&u+x< buf.width&& Dist < WallDist[u+x])
+			DrawSpriteCol(u+x, Sprite, w, buf);
+	}
+
+	
 }
 static void
 FillRect(i32 xorigin, i32 yorigin, i32 width, i32 height, i32 color, FrameBuffer buf)
