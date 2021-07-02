@@ -1,4 +1,3 @@
-static i32 focalDepth =1;
 
 //the offset is just a debug thing
 //it'll go away when we integrate the minimap
@@ -201,7 +200,6 @@ DrawFloor(EntityState *player, FrameBuffer buf, BMP_Texture Floor,BMP_Texture Ce
 		{
 			i32 u = xStart +i*uStep - xoffset;
 			i32 v = yStart +i*vStep - yoffset;
-			
 			{
 				//NOTE(Alex): I bet the issue is in the next 4 lines
 				u=ABS(u%CellSize);
@@ -216,7 +214,6 @@ DrawFloor(EntityState *player, FrameBuffer buf, BMP_Texture Floor,BMP_Texture Ce
 
 			}
 		}
-
 		
 	}
 
@@ -307,8 +304,13 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 d
 		if(Ray.dist<epsilon)
 			Ray.dist=epsilon;
 		Ray.dist =(f32)ABS(RayX)/Ray.dist; 
+		//Perp Wall Distance
+		Memory.WallDist[i] = 1.0f/Ray.dist;
 		DrawWallCol(i, Ray, WallTexture, buf);
 	}
-	
-	
+	EntityState SpriteTest ={};
+	SpriteTest.xpos =768;
+	SpriteTest.ypos=309;
+
+	DrawSprite(CeilingTexture, SpriteTest, *playerState,Memory.WallDist,buf); 
 }

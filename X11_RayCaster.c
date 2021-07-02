@@ -33,6 +33,10 @@ typedef struct FrameBuffer
 	i32 *buffer;
 }FrameBuffer;
 
+//really bad to put it there
+//need to creat a screen info struct
+static i32 focalDepth =1;
+
 #include "./2DUtils.c"
 #include "./2DRenderer.c"
 #include "./RayCaster.c"

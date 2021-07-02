@@ -78,6 +78,19 @@ DrawQuad(i32 x[4], i32 y[4], i32 color, FrameBuffer buf)
 }
 
 static void
+FillRect(i32 xorigin, i32 yorigin, i32 width, i32 height, i32 color, FrameBuffer buf)
+{
+	for(i32 y = yorigin; y < yorigin + height  ; ++y)
+	{
+
+		for(i32 x = xorigin ; x  < xorigin + width; ++x)
+		{
+			DrawPixel(x, y, color, buf);
+		}
+	}
+}
+
+static void
 DrawCol(i32 x, i32 y, i32 h, i32 color, FrameBuffer buf)
 {
 	for(i32 i=0; i<h; ++i)
@@ -114,36 +127,63 @@ DrawWallCol(i32 x, RayInfo Ray , BMP_Texture Texture, FrameBuffer buf)
 		DrawPixel(x, drawStart-i, color, buf);
 	}
 }
-
 static void
-DrawSprite(BMP_Texture Sprite, EntityState Entity,EntityState Player,f32 Dist, f32 *WallDist, FrameBuffer buf)
+DrawSpriteCol(i32 x, BMP_Texture Texture, i32 u, i32 height, FrameBuffer buf)
 {
-	i32 u = Entity.xpos/Dist;
-	i32 w = CellSize/Dist;
-	u=((u+1)/2)*buf.width;
+	i32 vStart =0;
+	if(height >= buf.height)
+	{
+		vStart = ((f32)(height-buf.height)/(f32)height) * Texture.Height;
+		vStart = vStart/2;
+		height = buf.height -1;
+	}
+	i32 vEnd = Texture.Height - vStart-1;
+	f32 vStep = ((f32)(vEnd-vStart)/height);
+	f32 drawStart = buf.height/2 + height/2;
+	u32 *bm = Texture.Pixels;
+	for(i32 i=1; i<=height; ++i)
+	{
+		i32 color =0;
+		i32 v = vStart+ i*vStep;  	
+		
+		
+#if DEBUG_ON 
+		Assert((u>=0 && u<64 && v<64 && v>=0));
+#endif
+		//we swap u and v because our wall texture is stored by columns
+		color=*(bm+u+v*Texture.Width);
+		DrawPixel(x, drawStart-i, color, buf);
+	}
+}
+static void
+DrawSprite(BMP_Texture Sprite, EntityState Entity,EntityState Player, f32 *WallDist, FrameBuffer buf)
+{
+	//Dot product with our forward camera vector, essentially perp dist
+	f32 iDot = (Entity.xpos-Player.xpos)*Player.cosAngle + (Entity.ypos - Player.ypos)*Player.sinAngle;
+	if(iDot<5.0f)
+		return;
+	
+
+	f32 jDot = -(Entity.xpos-Player.xpos)*Player.sinAngle + (Entity.ypos - Player.ypos)*Player.cosAngle;
+	f32 u = (focalDepth*jDot/iDot);
+	f32 w = (f32)CellSize/iDot;
+	f32 h = w*buf.height*((f32)8/(f32)9);
+
+	u=((u+1.0f)/2.0f)*buf.width;
 	w= w*buf.width/2;
-	i32 h = w;
-	if(u+w/2< 0 || u-w >= buf.width)
+	i32 Xpix = (i32)(u+0.5f);
+	i32 Ypix = (i32)(h+0.5f);
+
+
+	if(Xpix+w/2< 0 || Xpix-w >= buf.width)
 	       return;	
 	for(i32 x =0; x<w/2; ++x)
 	{
-		if(u-x >=0 &&u-x< buf.width&& Dist < WallDist[u-x])
-			DrawSpriteCol(u-x, Sprite, w, buf);
-		if(u+x >=0 &&u+x< buf.width&& Dist < WallDist[u+x])
-			DrawSpriteCol(u+x, Sprite, w, buf);
+		if(Xpix-x >=0 &&Xpix-x< buf.width&& iDot < WallDist[Xpix-x])
+			DrawSpriteCol(Xpix-x, Sprite, (Sprite.Width/2)-Sprite.Width*(x/w), Ypix, buf);
+		if(Xpix+x >=0 &&Xpix+x< buf.width&& iDot < WallDist[Xpix+x])
+			DrawSpriteCol(Xpix+x, Sprite, (Sprite.Width/2)+Sprite.Width*(x/w), Ypix, buf);
 	}
 
 	
-}
-static void
-FillRect(i32 xorigin, i32 yorigin, i32 width, i32 height, i32 color, FrameBuffer buf)
-{
-	for(i32 y = yorigin; y < yorigin + height  ; ++y)
-	{
-
-		for(i32 x = xorigin ; x  < xorigin + width; ++x)
-		{
-			DrawPixel(x, y, color, buf);
-		}
-	}
 }
