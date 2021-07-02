@@ -220,7 +220,8 @@ DrawFloor(EntityState *player, FrameBuffer buf, BMP_Texture Floor,BMP_Texture Ce
 }
 static void
 GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 dtime,
-	       	BMP_Texture WallTexture,BMP_Texture FloorTexture,BMP_Texture CeilingTexture, GameMemory Memory)
+	   BMP_Texture WallTexture,BMP_Texture FloorTexture,BMP_Texture CeilingTexture,BMP_Texture SpriteTexture,
+	       	GameMemory Memory)
 {
 	if(input.q)
 		playerState->angle -= dtime*playerState->rotspeed;
@@ -312,5 +313,5 @@ GameUpdate(KeyboardInput input, FrameBuffer buf, EntityState *playerState, f32 d
 	SpriteTest.xpos =768;
 	SpriteTest.ypos=309;
 
-	DrawSprite(CeilingTexture, SpriteTest, *playerState,Memory.WallDist,buf); 
+	DrawSprite(SpriteTexture, SpriteTest, *playerState,Memory.WallDist,buf); 
 }

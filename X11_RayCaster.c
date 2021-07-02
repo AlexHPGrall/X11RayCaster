@@ -119,12 +119,15 @@ NOTE: malloc might not deliver optimal performande, should try to allocate the b
 	BMP_Texture WallTexture = {};
 	BMP_Texture CeilingTexture = {};
 	BMP_Texture FloorTexture = {};
+	BMP_Texture SpriteTexture = {};
 	CeilingTexture .Pixels = (u32 *)malloc(64*64*sizeof(u32));
 	FloorTexture .Pixels = (u32 *)malloc(64*64*sizeof(u32));
 	WallTexture.Pixels = (u32 *)malloc(64*64*sizeof(u32));
+	SpriteTexture.Pixels = (u32 *)malloc(64*64*sizeof(u32));
 	LoadBMPFlipped("./assets/Brown1.bmp", &WallTexture);
 	LoadBMP("./assets/Wall1.bmp", &CeilingTexture);
 	LoadBMP("./assets/colorstone.bmp", &FloorTexture);
+	LoadBMPFlipped("./assets/soldier_front.bmp", &SpriteTexture);
 	Assert(WallTexture.Height == 64 && WallTexture.Width == 64);
 	GameMemory Mem = {0};
 	Mem.WallDist = (f32 *)malloc(width*sizeof(f32));
@@ -238,7 +241,7 @@ NOTE: malloc might not deliver optimal performande, should try to allocate the b
 		prevtime = currenttime;
 
 		GameUpdate(KbInput, ImageFrameBuffer, &state, elapsedtime/1000.0f, 
-				WallTexture, FloorTexture, CeilingTexture, Mem);
+				WallTexture, FloorTexture, CeilingTexture,SpriteTexture, Mem);
 		/*
 		i32 *Pixel = ImageFrameBuffer.buffer;
 		i32 *bm = WallTexture.Pixels;

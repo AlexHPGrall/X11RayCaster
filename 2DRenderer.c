@@ -151,7 +151,11 @@ DrawSpriteCol(i32 x, BMP_Texture Texture, i32 u, i32 height, FrameBuffer buf)
 		Assert((u>=0 && u<64 && v<64 && v>=0));
 #endif
 		//we swap u and v because our wall texture is stored by columns
-		color=*(bm+u+v*Texture.Width);
+		color=*(bm+v+u*Texture.Width);
+		
+		//transparency hack
+		if(color == 0x980088)
+			continue;
 		DrawPixel(x, drawStart-i, color, buf);
 	}
 }
